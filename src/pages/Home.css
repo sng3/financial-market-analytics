@@ -1,0 +1,77 @@
+.pageTitle {
+  margin: 0 0 8px;
+  font-size: 34px;
+}
+
+.muted {
+  color: #bdbdbd;
+  margin: 0 0 18px;
+}
+
+.searchCard {
+  border: 1px solid #2a2a2a;
+  background: #161616;
+  padding: 16px;
+  border-radius: 14px;
+  max-width: 520px;
+}
+
+.label {
+  display: block;
+  color: #bdbdbd;
+  margin-bottom: 8px;
+}
+
+.row {
+  display: flex;
+  gap: 10px;
+}
+
+.input {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #2a2a2a;
+  background: #0f0f0f;
+  color: #fff;
+}
+
+.btn {
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid #2a2a2a;
+  background: #1e1e1e;
+  color: #fff;
+  cursor: pointer;
+}
+
+.infoGrid {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  max-width: 900px;
+}
+
+.infoBox {
+  border: 1px solid #2a2a2a;
+  background: #161616;
+  padding: 16px;
+  border-radius: 14px;
+}
+
+.infoBox h3 {
+  margin: 0 0 8px;
+}
+
+.infoBox ul {
+  margin: 0;
+  padding-left: 18px;
+  color: #d7d7d7;
+}
+
+@media (max-width: 800px) {
+  .infoGrid {
+    grid-template-columns: 1fr;
+  }
+}

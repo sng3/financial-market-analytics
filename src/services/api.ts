@@ -1,21 +1,18 @@
-// const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
-
-export interface StockData {
+export interface StockOverview {
   symbol: string;
   price: number;
   change: number;
+  changePercent: number;
 }
 
-export async function getStock(symbol: string): Promise<StockData> {
-  // Mock data for now (Week 1)
+export async function getStockOverview(symbol: string): Promise<StockOverview> {
+  const s = symbol.trim().toUpperCase();
+
+  // Mock for now. Replace with real Flask call later.
   return {
-    symbol,
+    symbol: s,
     price: 180.25,
     change: 1.32,
+    changePercent: 0.74,
   };
-
-  // Real backend call will replace this later
-  // const res = await fetch(`${BASE_URL}/api/stock/${symbol}`);
-  // if (!res.ok) throw new Error("Failed to fetch stock");
-  // return res.json();
 }

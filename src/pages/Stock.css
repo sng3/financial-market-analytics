@@ -1,0 +1,41 @@
+.pageTitle {
+  margin: 0 0 8px;
+  font-size: 34px;
+}
+
+.muted {
+  color: #bdbdbd;
+  margin: 0 0 18px;
+}
+
+.error {
+  color: #ff6b6b;
+}
+
+.stockGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.span2 {
+  grid-column: 1 / span 2;
+}
+
+.topRow {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 14px;
+}
+
+@media (max-width: 900px) {
+  .stockGrid {
+    grid-template-columns: 1fr;
+  }
+  .span2 {
+    grid-column: auto;
+  }
+  .topRow {
+    grid-template-columns: 1fr;
+  }
+}
