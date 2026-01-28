@@ -71,3 +71,5 @@ export default defineConfig([
   },
 ])
 ```
+## DEV NOTES
+  Setup verified on Ryan's mahine.
