@@ -1,33 +1,23 @@
-import os
-import time
-from flask import Flask, jsonify, request
+from flask import Flask
 from flask_cors import CORS
+
+from app.db import init_db, close_db
+from app.routes import stocks_bp, watchlists_bp
 
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "*"}})
 
+app.register_blueprint(stocks_bp)
+app.register_blueprint(watchlists_bp)
+
 @app.get("/api/health")
 def health():
-    return jsonify({"status": "ok"})
+    return {"status": "ok"}
 
-@app.get("/api/stocks/quote")
-def quote():
-    """
-    TEMP: returns a stub quote so we can verify frontend ↔ backend works.
-    Next step: swap this stub with robin_stocks provider + login.
-    """
-    ticker = (request.args.get("ticker") or "").strip().upper()
-    if not ticker:
-        return jsonify({"error": "ticker is required"}), 400
+app.teardown_appcontext(close_db)
 
-    # Stub response for now
-    return jsonify({
-        "ticker": ticker,
-        "price": 180.25,
-        "change": 1.32,
-        "changePercent": 0.74,
-        "timestamp": int(time.time())
-    })
+with app.app_context():
+    init_db()
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5000, debug=True)
