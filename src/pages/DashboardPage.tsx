@@ -1,5 +1,8 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
+
+import { fetchStock, type StockResponse } from "../services/api";
+
 import StockSearchBar from "../components/StockSearchBar";
 import PriceOverviewCard from "../components/PriceOverviewCard";
 import HistoricalChartCard from "../components/HistoricalChartCard";
@@ -23,17 +26,42 @@ export default function DashboardPage() {
   const [ticker, setTicker] = useState(initial.toUpperCase());
   const [exportOpen, setExportOpen] = useState(false);
 
-  // Placeholder data until you connect backend
+  // ✅ New state for real-time data
+  const [stock, setStock] = useState<StockResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string>("");
+
+  // ✅ Fetch real-time data whenever ticker changes
+  useEffect(() => {
+    const run = async () => {
+      setLoading(true);
+      setErr("");
+      try {
+        const data = await fetchStock(ticker);
+        setStock(data);
+      } catch (e: unknown) {
+        const anyE = e as any;
+        setStock(null);
+        setErr(anyE?.response?.data?.error ?? "Failed to fetch stock data");
+      } finally {
+        setLoading(false);
+      }
+    };
+    run();
+  }, [ticker]);
+
+  // ✅ Use real data if available; fallback to demo values if not
   const overview = {
-    ticker,
-    name: "Example Company",
-    price: 182.45,
-    change: 2.13,
-    changePct: 1.18,
-    updatedAt: nowTimeString(),
+    ticker: stock?.ticker ?? ticker,
+    name: stock?.name ?? "Example Company",
+    price: stock?.price ?? 182.45,
+    change: stock?.change ?? 2.13,
+    changePct: stock?.changePct ?? 1.18,
+    updatedAt: stock?.updatedAt ?? nowTimeString(),
     marketStatus: "Open" as const,
   };
 
+  // Placeholder series (you can replace later with real historical data)
   const series = useMemo(
     () =>
       Array.from({ length: 120 }, (_, i) => ({
@@ -47,14 +75,21 @@ export default function DashboardPage() {
     <div className="container">
       <div style={{ margin: "14px 0" }}>
         <StockSearchBar
-          onSearch={(q) => {
-            if (!q) return;
-            const next = q.toUpperCase();
+          onSelectTicker={(t) => {
+            const next = t.toUpperCase();
             setTicker(next);
             nav(`/dashboard?t=${encodeURIComponent(next)}`);
           }}
         />
       </div>
+
+      {/* ✅ Loading + Error messages for real-time data */}
+      {loading && (
+        <div style={{ marginTop: 12, color: "var(--muted)" }}>Loading...</div>
+      )}
+      {err && (
+        <div style={{ marginTop: 12, color: "var(--red)" }}>{err}</div>
+      )}
 
       <PriceOverviewCard {...overview} />
 
@@ -85,7 +120,10 @@ export default function DashboardPage() {
           <div className="rowWrap">
             <button className="btn">★ Add to Watchlist</button>
             <button className="btn">⏰ Set Alert</button>
-            <button className="btn btnPrimary" onClick={() => setExportOpen(true)}>
+            <button
+              className="btn btnPrimary"
+              onClick={() => setExportOpen(true)}
+            >
               ⬇ Export
             </button>
           </div>

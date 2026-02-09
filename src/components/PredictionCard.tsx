@@ -23,7 +23,7 @@ export default function PredictionCard({ horizon, trend, confidence }: Props) {
       </div>
 
       <div style={{ marginTop: 10, color: "var(--muted2)", fontSize: 13, lineHeight: 1.45 }}>
-        Disclaimer: This prediction is for educational purposes only and is not financial advice.
+        Disclaimer: This prediction is for educational purposes only and is not financial advice. All investment decisions are made at your own risk.
       </div>
     </Card>
   );
