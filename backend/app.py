@@ -2,6 +2,13 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import yfinance as yf
 
+import time
+
+# Global variable to track last API call time
+LAST_API_CALL = 0
+RATE_LIMIT_SECONDS = 1  # 1 request per second
+
+
 app = Flask(__name__)
 CORS(app)
 
@@ -28,12 +35,30 @@ def search():
 
 @app.get("/api/stock")
 def get_stock():
+    
+    global LAST_API_CALL
+
     ticker = request.args.get("ticker", "").upper().strip()
     if not ticker:
         return jsonify({"error": "ticker is required"}), 400
+    
+    # Rate limit API calls to avoid hitting yfinance limits
+    now = time.time()
+    elapsed = now - LAST_API_CALL
+    if elapsed < RATE_LIMIT_SECONDS:
+        time.sleep(RATE_LIMIT_SECONDS - elapsed)
+    LAST_API_CALL = time.time()
 
-    t = yf.Ticker(ticker)
-    hist = t.history(period="2d", interval="1d")
+    try:
+        t = yf.Ticker(ticker)
+        hist = t.history(period="2d", interval="1d")
+    except Exception as e:
+        print(f"[API ERROR] Failed to fetch data for {ticker}: {e}")
+        return jsonify({
+        "error": "external API failure",
+        "ticker": ticker
+    }), 502
+
 
     if hist.empty or len(hist) < 2:
         return jsonify({"error": f"no data for {ticker}"}), 404
