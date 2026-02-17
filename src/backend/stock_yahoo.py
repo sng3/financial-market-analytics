@@ -1,7 +1,7 @@
-# Install yfinance
+#import yahoo finance as yf
 import yfinance as yf
 
-#Defines a function to fetch stock information from Yahoo Finance
+#function to get a stock overview
 def get_stock_overview(symbol):
     symbol = symbol.strip().upper()
     ticker = yf.Ticker(symbol)
@@ -21,5 +21,6 @@ def get_stock_overview(symbol):
         "changePercent": round(change_percent, 2),
     }
 
+#example usage
 print("Testing Yahoo Finance...")
 print(get_stock_overview("AAPL"))
