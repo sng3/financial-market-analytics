@@ -27,3 +27,32 @@ node_modules
 .env
 dist
 .vs/
+
+# -----------------------
+# Python / Flask
+# -----------------------
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environments
+venv/
+.env/
+.venv/
+
+# SQLite database
+*.db
+*.sqlite3
+
+# Python build artifacts
+build/
+develop-eggs/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
