@@ -51,3 +51,22 @@ def get_history(ticker: str, days: int = 30) -> dict:
         "days": days,
         "series": series,
     }
+
+def search_tickers(q: str):
+    q = (q or "").strip()
+    if not q:
+        return []
+
+    sample = [
+        {"ticker": "AAPL", "name": "Apple Inc."},
+        {"ticker": "NVDA", "name": "NVIDIA Corporation"},
+        {"ticker": "MSFT", "name": "Microsoft Corporation"},
+        {"ticker": "AMZN", "name": "Amazon.com, Inc."},
+        {"ticker": "GOOGL", "name": "Alphabet Inc. (Class A)"},
+        {"ticker": "TSLA", "name": "Tesla, Inc."},
+    ]
+
+    q_upper = q.upper()
+    q_lower = q.lower()
+    return [x for x in sample if q_upper in x["ticker"] or q_lower in x["name"].lower()]
+

@@ -1,23 +1,60 @@
 from flask import Blueprint, request, jsonify
-from app.services.market_data import get_quote, get_history
+from app.services.market_data import get_quote, get_history, search_tickers
 
-bp = Blueprint("stocks", __name__, url_prefix="/api/stocks")
+stocks_bp = Blueprint("stocks", __name__)
 
-@bp.get("/quote")
-def quote():
-    ticker = (request.args.get("ticker") or "").strip().upper()
+@stocks_bp.get("/api/health")
+def health():
+    return jsonify({"ok": True})
+
+@stocks_bp.get("/api/stock")
+def stock():
+    ticker = request.args.get("ticker", "").upper().strip()
     if not ticker:
-        return jsonify({"error": "ticker is required"}), 400
-    return jsonify(get_quote(ticker))
+        return jsonify({"error": "ticker required"}), 400
 
-@bp.get("/history")
+    try:
+        data = get_quote(ticker)
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@stocks_bp.get("/api/search")
+def search():
+    q = request.args.get("q", "").strip()
+    try:
+        results = search_tickers(q)
+        return jsonify(results)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@stocks_bp.get("/api/history")
 def history():
-    ticker = (request.args.get("ticker") or "").strip().upper()
-    days = int(request.args.get("days", 30))
+    ticker = request.args.get("ticker", "").upper().strip()
+    range_ = request.args.get("range", "1y")
 
     if not ticker:
-        return jsonify({"error": "ticker is required"}), 400
-    if days < 1 or days > 365:
-        return jsonify({"error": "days must be between 1 and 365"}), 400
+        return jsonify({"error": "ticker required"}), 400
 
-    return jsonify(get_history(ticker, days))
+    # Map frontend ranges to days
+    range_map = {
+        "1d": 1,
+        "5d": 5,
+        "1m": 30,
+        "6m": 180,
+        "1y": 365,
+        "max": 1825
+    }
+
+    days = range_map.get(range_.lower(), 365)
+
+    try:
+        data = get_history(ticker, days)
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+
