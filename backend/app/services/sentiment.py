@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from typing import Any, Dict, List
+from app.services.cache import cache_get, cache_set
 import hashlib
 
 
@@ -28,6 +29,12 @@ def get_sentiment(ticker: str) -> Dict[str, Any]:
     ticker = (ticker or "").strip().upper()
     if not ticker:
         raise ValueError("ticker required")
+    
+    cache_key = f"sentiment:{ticker}"
+    cached = cache_get(cache_key)
+    if cached is not None:
+        return cached
+
 
     overall_score = _stable_stub_score(ticker)
     overall_label = _score_to_label(overall_score)
@@ -60,10 +67,13 @@ def get_sentiment(ticker: str) -> Dict[str, Any]:
     for h in headlines:
         h["label"] = _score_to_label(h["score"])
 
-    return {
+    result = {
         "ticker": ticker,
         "updatedAt": _utc_now_iso(),
         "overall": {"label": overall_label, "score": overall_score},
         "topics": topics,
         "headlines": headlines,
     }
+
+    return cache_set(cache_key, result, ttl_seconds=300)  # 5 minutes
+
