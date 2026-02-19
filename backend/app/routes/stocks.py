@@ -5,6 +5,8 @@ from app.services.market_data import (
     search_tickers,
     build_indicators_from_history,
 )
+from app.services.sentiment import get_sentiment
+
 
 stocks_bp = Blueprint("stocks", __name__)
 
@@ -78,5 +80,16 @@ def indicators():
                 "sma50": ind["sma50"],
             },
         })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@stocks_bp.get("/api/sentiment")
+def sentiment():
+    ticker = request.args.get("ticker", "").upper().strip()
+    if not ticker:
+        return jsonify({"error": "ticker required"}), 400
+
+    try:
+        return jsonify(get_sentiment(ticker))
     except Exception as e:
         return jsonify({"error": str(e)}), 500
