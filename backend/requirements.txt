@@ -2,3 +2,5 @@ Flask==3.0.3
 Flask-Cors==4.0.1
 python-dotenv==1.0.1
 robin_stocks==3.4.0
+yfinance==0.2.54
+pandas==2.2.3
