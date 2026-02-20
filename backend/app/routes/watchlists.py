@@ -36,3 +36,23 @@ def add_ticker(watchlist_id: int):
     db.commit()
 
     return jsonify({"ok": True, "watchlist_id": watchlist_id, "ticker": ticker}), 201
+
+@bp.delete("/watchlists/<int:watchlist_id>/tickers/<string:ticker>")
+def delete_ticker(watchlist_id: int, ticker: str):
+    ticker = (ticker or "").strip().upper()
+    if not ticker:
+        return jsonify({"error": "ticker is required"}), 400
+
+    db = get_db()
+    cur = db.execute(
+        "DELETE FROM watchlist_items WHERE watchlist_id = ? AND ticker = ?;",
+        (watchlist_id, ticker),
+    )
+    db.commit()
+
+    return jsonify({
+        "ok": True,
+        "watchlist_id": watchlist_id,
+        "ticker": ticker,
+        "deleted": cur.rowcount
+    }), 200
