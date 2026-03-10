@@ -75,14 +75,22 @@ export async function fetchSentiment(
 
 export type IndicatorsResponse = {
   ticker: string;
-  rsi: number | null;
-  sma20: number | null;
-  sma50: number | null;
-  smaTrend: "Up" | "Down" | "Neutral";
-  updatedAt: string;
+  period: string;
+  interval: string;
+  timestamps: string[];
+  close: number[];
+  sma20: Array<number | null>;
+  sma50: Array<number | null>;
+  rsi14: Array<number | null>;
+  updatedAt: number;
 };
 
 export async function fetchIndicators(ticker: string): Promise<IndicatorsResponse> {
-  const res = await axios.get(`${API_BASE}/api/indicators`, { params: { ticker } });
-  return res.data as IndicatorsResponse;
+  const res = await fetch(`/api/indicator_series?ticker=${encodeURIComponent(ticker)}`);
+
+  if (!res.ok) {
+    throw new Error("Failed to fetch indicators");
+  }
+
+  return res.json();
 }

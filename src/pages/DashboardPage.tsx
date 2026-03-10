@@ -167,9 +167,37 @@ export default function DashboardPage() {
     [ticker]
   );
 
-  // Defaults for indicators card
-  const rsiValue = indicators?.rsi ?? 50;
-  const smaTrendValue = coerceSmaTrend((indicators as any)?.smaTrend);
+  // Convert backend indicator arrays into single values for the card
+  const latestRsi =
+    indicators?.rsi14
+      ?.slice()
+      .reverse()
+      .find((v: number | null) => v != null) ?? 50;
+
+  const latestSma20 =
+    indicators?.sma20
+      ?.slice()
+      .reverse()
+      .find((v: number | null) => v != null);
+
+  const latestSma50 =
+    indicators?.sma50
+      ?.slice()
+      .reverse()
+      .find((v: number | null) => v != null);
+
+  let derivedSmaTrend: "Up" | "Down" | "Flat" = "Flat";
+
+  if (latestSma20 != null && latestSma50 != null) {
+    if (latestSma20 > latestSma50) {
+      derivedSmaTrend = "Up";
+    } else if (latestSma20 < latestSma50) {
+      derivedSmaTrend = "Down";
+    }
+  }
+
+  const rsiValue = latestRsi;
+  const smaTrendValue = derivedSmaTrend;
 
   return (
     <div className="container">

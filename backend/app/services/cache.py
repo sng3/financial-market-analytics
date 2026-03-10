@@ -1,35 +1,38 @@
-# backend/app/services/cache.py
-from __future__ import annotations
-
+import json
 import time
-from typing import Any, Dict, Optional, Tuple
+from app.db import get_db
 
-_cache: Dict[str, Tuple[float, Any]] = {}
+def cache_get(cache_key: str):
+    db = get_db()
+    now = int(time.time())
 
+    row = db.execute(
+        "SELECT payload_json, updated_at, ttl_seconds FROM cache WHERE cache_key = ?;",
+        (cache_key,)
+    ).fetchone()
 
-def cache_get(key: str) -> Optional[Any]:
-    item = _cache.get(key)
-    if not item:
+    if not row:
         return None
 
-    expires_at, value = item
-    if time.time() >= expires_at:
-        _cache.pop(key, None)
+    if int(row["updated_at"]) + int(row["ttl_seconds"]) < now:
         return None
 
-    return value
+    try:
+        return json.loads(row["payload_json"])
+    except Exception:
+        return None
 
+def cache_set(cache_key: str, payload: dict, ttl_seconds: int):
+    db = get_db()
+    now = int(time.time())
 
-def cache_set(key: str, value: Any, ttl_seconds: int = 60) -> Any:
-    _cache[key] = (time.time() + ttl_seconds, value)
-    return value
+    db.execute("""
+        INSERT INTO cache(cache_key, payload_json, updated_at, ttl_seconds)
+        VALUES(?,?,?,?)
+        ON CONFLICT(cache_key) DO UPDATE SET
+            payload_json=excluded.payload_json,
+            updated_at=excluded.updated_at,
+            ttl_seconds=excluded.ttl_seconds
+    """, (cache_key, json.dumps(payload), now, int(ttl_seconds)))
 
-
-def cache_clear(prefix: Optional[str] = None) -> None:
-    if prefix is None:
-        _cache.clear()
-        return
-
-    keys = [k for k in _cache.keys() if k.startswith(prefix)]
-    for k in keys:
-        _cache.pop(k, None)
+    db.commit()
