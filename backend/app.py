@@ -271,8 +271,12 @@ def get_stock():
     # Optional: cache stock summary briefly to reduce repeated calls
     cache_key = f"stock:{ticker}"
     cached_payload = cache_get(cache_key)
+
     if cached_payload:
+        print(f"[CACHE HIT] stock {ticker}")
         return jsonify(cached_payload)
+
+    print(f"[CACHE MISS] stock {ticker}")
 
     t = yf.Ticker(ticker)
     hist = t.history(period="2d", interval="1d")
@@ -315,8 +319,12 @@ def sentiment():
     # SQLite cache (replaces in-memory cache)
     cache_key = f"sentiment:{ticker}"
     cached_payload = cache_get(cache_key)
+
     if cached_payload:
+        print(f"[CACHE HIT] sentiment {ticker}")
         return jsonify(cached_payload)
+
+    print(f"[CACHE MISS] sentiment {ticker}")
 
     api_key = os.environ.get("NEWS_API_KEY")
 
@@ -467,8 +475,12 @@ def indicator_series():
     # Cache: same series result reused a lot
     cache_key = f"indicator_series:{ticker}:{period}:{interval}"
     cached = cache_get(cache_key)
+
     if cached:
+        print(f"[CACHE HIT] indicator_series {ticker}")
         return jsonify(cached)
+
+    print(f"[CACHE MISS] indicator_series {ticker}")
 
     t = yf.Ticker(ticker)
     hist = t.history(period=period, interval=interval)
@@ -505,7 +517,6 @@ def indicator_series():
     # Cache 5 minutes
     cache_set(cache_key, payload, ttl=300)
     return jsonify(payload)
-
 @app.get("/api/debug_tables")
 def debug_tables():
     conn = db_conn()
