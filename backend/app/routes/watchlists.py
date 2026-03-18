@@ -56,3 +56,4 @@ def delete_ticker(watchlist_id: int, ticker: str):
         "ticker": ticker,
         "deleted": cur.rowcount
     }), 200
+

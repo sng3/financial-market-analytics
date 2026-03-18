@@ -1,4 +1,3 @@
-# backend/app/services/market_data.py
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
@@ -6,10 +5,6 @@ from typing import Any, Dict, List, Optional
 
 import yfinance as yf
 
-
-# -----------------------------
-# Helpers
-# -----------------------------
 
 def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -25,7 +20,6 @@ def _safe_float(x) -> Optional[float]:
 
 
 def _stub_search_universe() -> List[Dict[str, str]]:
-    # Replace later with a real symbol search provider.
     return [
         {"ticker": "AAPL", "name": "Apple Inc."},
         {"ticker": "NVDA", "name": "NVIDIA Corporation"},
@@ -36,9 +30,18 @@ def _stub_search_universe() -> List[Dict[str, str]]:
     ]
 
 
-# -----------------------------
-# Public API used by routes
-# -----------------------------
+def _map_range_to_period_interval(range_value: str) -> tuple[str, str]:
+    range_value = (range_value or "1Y").strip().upper()
+    mapping = {
+        "1D": ("1d", "5m"),
+        "5D": ("5d", "30m"),
+        "1M": ("1mo", "1d"),
+        "6M": ("6mo", "1d"),
+        "1Y": ("1y", "1d"),
+        "MAX": ("max", "1wk"),
+    }
+    return mapping.get(range_value, ("1y", "1d"))
+
 
 def search_tickers(q: str) -> List[Dict[str, str]]:
     q = (q or "").strip()
@@ -52,12 +55,6 @@ def search_tickers(q: str) -> List[Dict[str, str]]:
 
 
 def get_quote(ticker: str) -> Dict[str, Any]:
-    """
-    Returns:
-      {
-        ticker, name, price, prevClose, change, changePct, updatedAt
-      }
-    """
     ticker = (ticker or "").strip().upper()
     if not ticker:
         raise ValueError("ticker required")
@@ -69,17 +66,13 @@ def get_quote(ticker: str) -> Dict[str, Any]:
         price = _safe_float(fi.get("last_price") or fi.get("lastPrice") or fi.get("last"))
         prev_close = _safe_float(fi.get("previous_close") or fi.get("previousClose"))
 
-        # fallback via short history if needed
         if price is None or prev_close is None:
             hist = t.history(period="5d")
             if hist is not None and not hist.empty and "Close" in hist.columns:
                 if price is None:
                     price = _safe_float(hist["Close"].iloc[-1])
                 if prev_close is None:
-                    if len(hist) >= 2:
-                        prev_close = _safe_float(hist["Close"].iloc[-2])
-                    else:
-                        prev_close = price
+                    prev_close = _safe_float(hist["Close"].iloc[-2]) if len(hist) >= 2 else price
 
         if price is None or prev_close is None:
             raise RuntimeError("Could not resolve quote from yfinance")
@@ -108,7 +101,6 @@ def get_quote(ticker: str) -> Dict[str, Any]:
         }
 
     except Exception:
-        # Stub fallback to avoid breaking UI during yfinance hiccups
         price = 182.45
         prev_close = 180.32
         change = price - prev_close
@@ -126,13 +118,6 @@ def get_quote(ticker: str) -> Dict[str, Any]:
 
 
 def get_history(ticker: str, days: int = 30) -> Dict[str, Any]:
-    """
-    Returns:
-      {
-        ticker, days,
-        series: [{date: "YYYY-MM-DD", close: number}, ...]
-      }
-    """
     ticker = (ticker or "").strip().upper()
     if not ticker:
         raise ValueError("ticker required")
@@ -143,8 +128,6 @@ def get_history(ticker: str, days: int = 30) -> Dict[str, Any]:
 
     try:
         t = yf.Ticker(ticker)
-
-        # buffer for weekends/holidays
         start = (datetime.now(timezone.utc) - timedelta(days=days * 2)).date().isoformat()
         df = t.history(start=start)
 
@@ -170,109 +153,55 @@ def get_history(ticker: str, days: int = 30) -> Dict[str, Any]:
         return {"ticker": ticker, "days": days, "series": series}
 
     except Exception:
-        # Stub fallback
         base = 170.0
         series: List[Dict[str, Any]] = []
+
         for i in range(days):
             date = (datetime.now(timezone.utc) - timedelta(days=(days - i))).date().isoformat()
             base += 0.25 if i % 2 == 0 else -0.12
             series.append({"date": date, "close": round(base, 2)})
+
         return {"ticker": ticker, "days": days, "series": series}
 
 
-# -----------------------------
-# Indicators
-# -----------------------------
+def get_history_by_range(ticker: str, range_value: str = "1Y") -> Dict[str, Any]:
+    ticker = (ticker or "").strip().upper()
+    if not ticker:
+        raise ValueError("ticker required")
 
-def compute_sma(closes: List[float], window: int) -> List[Optional[float]]:
-    """
-    Returns SMA series aligned to closes.
-    First (window-1) entries are None.
-    """
-    if window <= 0:
-        raise ValueError("window must be > 0")
+    period, interval = _map_range_to_period_interval(range_value)
+    t = yf.Ticker(ticker)
+    df = t.history(period=period, interval=interval)
 
-    out: List[Optional[float]] = [None] * len(closes)
-    if len(closes) < window:
-        return out
+    if df is None or df.empty or "Close" not in df.columns:
+        return {
+            "ticker": ticker,
+            "range": range_value,
+            "series": [],
+        }
 
-    running_sum = sum(closes[:window])
-    out[window - 1] = running_sum / window
+    series: List[Dict[str, Any]] = []
 
-    for i in range(window, len(closes)):
-        running_sum += closes[i] - closes[i - window]
-        out[i] = running_sum / window
-
-    return out
-
-
-def compute_rsi(closes: List[float], period: int = 14) -> Optional[float]:
-    """
-    Returns the latest RSI value (Wilder smoothing).
-    If not enough data, returns None.
-    """
-    if period <= 0:
-        raise ValueError("period must be > 0")
-    if len(closes) < period + 1:
-        return None
-
-    gains = 0.0
-    losses = 0.0
-
-    for i in range(1, period + 1):
-        change = closes[i] - closes[i - 1]
-        if change >= 0:
-            gains += change
-        else:
-            losses += -change
-
-    avg_gain = gains / period
-    avg_loss = losses / period
-
-    for i in range(period + 1, len(closes)):
-        change = closes[i] - closes[i - 1]
-        gain = max(change, 0.0)
-        loss = max(-change, 0.0)
-        avg_gain = (avg_gain * (period - 1) + gain) / period
-        avg_loss = (avg_loss * (period - 1) + loss) / period
-
-    if avg_loss == 0:
-        return 100.0
-
-    rs = avg_gain / avg_loss
-    return 100.0 - (100.0 / (1.0 + rs))
-
-
-def build_indicators_from_history(history: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Expects:
-      { "days": int, "series": [{ "date": "...", "close": 123.45 }, ...] }
-
-    Returns:
-      { points, dates, close, sma20, sma50, rsi14 }
-    """
-    series = history.get("series", []) or []
-
-    dates: List[str] = []
-    closes: List[float] = []
-
-    for row in series:
-        c = _safe_float(row.get("close"))
-        d = row.get("date")
-        if c is None or not d:
+    for idx, row in df.iterrows():
+        close = _safe_float(row.get("Close"))
+        if close is None:
             continue
-        dates.append(str(d))
-        closes.append(c)
 
-    sma20 = compute_sma(closes, 20)
-    sma50 = compute_sma(closes, 50)
-    rsi14 = compute_rsi(closes, 14)
+        try:
+            if range_value.upper() in ("1D", "5D"):
+                label = idx.strftime("%Y-%m-%d %H:%M")
+            else:
+                label = idx.strftime("%Y-%m-%d")
+        except Exception:
+            label = str(idx)
+
+        series.append({
+            "t": label,
+            "v": round(close, 2),
+        })
 
     return {
-        "points": len(closes),
-        "dates": dates,
-        "close": closes,
-        "sma20": sma20,
-        "sma50": sma50,
-        "rsi14": rsi14,
+        "ticker": ticker,
+        "range": range_value,
+        "series": series,
     }

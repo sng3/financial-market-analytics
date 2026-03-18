@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from app.services.cache import cache_get, cache_set
-from app.services.market_data import search_tickers, get_quote
+from app.services.market_data import search_tickers, get_quote, get_history_by_range
 from app.services.indicators_service import build_indicator_series
 from app.services.sentiment_service import get_sentiment
 
@@ -70,6 +70,28 @@ def indicator_series():
         return jsonify(payload)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@stocks_bp.get("/api/history")
+def history():
+    ticker = request.args.get("ticker", "").upper().strip()
+    range_value = (request.args.get("range") or "1Y").strip().upper()
+
+    if not ticker:
+        return jsonify({"error": "ticker is required"}), 400
+
+    cache_key = f"history:{ticker}:{range_value}"
+    cached = cache_get(cache_key)
+    if cached:
+        return jsonify(cached)
+
+    try:
+        payload = get_history_by_range(ticker, range_value)
+        cache_set(cache_key, payload, ttl_seconds=300)
+        return jsonify(payload)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"error": f"Failed to fetch history: {str(e)}"}), 500
 
 @stocks_bp.get("/api/debug_tables")
 def debug_tables():

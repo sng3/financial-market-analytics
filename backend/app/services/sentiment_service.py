@@ -1,8 +1,7 @@
 import os
-import time
-import requests
 from urllib.parse import urlparse
 
+import requests
 import yfinance as yf
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
@@ -10,12 +9,14 @@ analyzer = SentimentIntensityAnalyzer()
 
 _BAD_DOMAINS = {"consent.yahoo.com", "guce.yahoo.com"}
 
+
 def _label_from_score(score: float) -> str:
     if score >= 0.15:
         return "Positive"
     if score <= -0.15:
         return "Negative"
     return "Neutral"
+
 
 def _clean_url(u: str) -> str:
     u = (u or "").strip()
@@ -29,6 +30,7 @@ def _clean_url(u: str) -> str:
         return ""
     return u
 
+
 def _looks_relevant(ticker: str, company_name: str, title: str, desc: str) -> bool:
     text = f"{title} {desc}".lower()
     has_identity = (ticker.lower() in text) or (company_name.lower() in text)
@@ -36,10 +38,11 @@ def _looks_relevant(ticker: str, company_name: str, title: str, desc: str) -> bo
     finance_keywords = [
         "stock", "shares", "earnings", "revenue", "guidance", "dividend",
         "nasdaq", "nyse", "market", "investor", "analyst", "price target",
-        "quarter", "sec", "ipo", "futures", "options"
+        "quarter", "sec", "ipo", "futures", "options",
     ]
     has_finance = any(k in text for k in finance_keywords)
     return has_identity and has_finance
+
 
 def _yf_news_items(ticker: str):
     t = yf.Ticker(ticker)
@@ -49,6 +52,7 @@ def _yf_news_items(ticker: str):
         news = []
 
     items, scores = [], []
+
     for n in news[:15]:
         title = (n.get("title") or "").strip()
         if not title:
@@ -66,11 +70,12 @@ def _yf_news_items(ticker: str):
             "publisher": n.get("publisher") or "",
             "publishedAt": n.get("providerPublishTime") or None,
             "url": url,
-            "imageUrl": ""
+            "imageUrl": "",
         })
 
     avg = sum(scores) / len(scores) if scores else 0.0
     return avg, items
+
 
 def get_sentiment(ticker: str):
     ticker = (ticker or "").strip().upper()
@@ -96,12 +101,20 @@ def get_sentiment(ticker: str):
             company_name = ticker
 
         query = f'("{ticker}" OR "{company_name}") AND (stock OR shares OR earnings OR market OR finance OR investor)'
-        params = {"q": query, "language": "en", "sortBy": "publishedAt", "pageSize": 25}
+        params = {
+            "q": query,
+            "language": "en",
+            "sortBy": "publishedAt",
+            "pageSize": 25,
+        }
         headers = {"X-Api-Key": api_key}
 
         try:
-            r = requests.get(url, params=params, headers=headers, timeout=10)
-            data = r.json() if r is not None else {}
+            r = requests.get(url, params=params, headers=headers, timeout=20)
+            try:
+                data = r.json() if r is not None else {}
+            except Exception:
+                data = {}
 
             if r.status_code == 429 or data.get("code") in ("rateLimited", "tooManyRequests"):
                 provider_status = "rate_limited"
@@ -119,6 +132,7 @@ def get_sentiment(ticker: str):
                     for a in articles[:25]:
                         title = (a.get("title") or "").strip()
                         desc = (a.get("description") or "").strip()
+
                         if not title and not desc:
                             continue
                         if not _looks_relevant(ticker, company_name, title, desc):
@@ -139,7 +153,7 @@ def get_sentiment(ticker: str):
                             "publisher": source.get("name") or "",
                             "publishedAt": a.get("publishedAt") or None,
                             "url": link,
-                            "imageUrl": a.get("urlToImage") or ""
+                            "imageUrl": a.get("urlToImage") or "",
                         })
 
                     items = filtered_items
@@ -149,9 +163,9 @@ def get_sentiment(ticker: str):
 
                     avg = sum(scores) / len(scores) if scores else 0.0
 
-        except Exception:
+        except Exception as e:
             provider_status = "error"
-            warning = "Failed to call NewsAPI"
+            warning = f"Failed to call NewsAPI: {str(e)}"
     else:
         provider_status = "error"
         warning = "NEWS_API_KEY is not set"
@@ -182,6 +196,6 @@ def get_sentiment(ticker: str):
         "health": {
             "provider": provider_used,
             "status": provider_status,
-            "warning": warning
-        }
+            "warning": warning,
+        },
     }

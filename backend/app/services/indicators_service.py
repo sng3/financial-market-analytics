@@ -1,18 +1,24 @@
 import time
 import yfinance as yf
 
+
 def _rolling_sma_series(values, window: int):
     out = []
-    s = 0.0
-    for i, v in enumerate(values):
-        s += v
+    running_sum = 0.0
+
+    for i, value in enumerate(values):
+        running_sum += value
+
         if i >= window:
-            s -= values[i - window]
+            running_sum -= values[i - window]
+
         if i >= window - 1:
-            out.append(s / window)
+            out.append(running_sum / window)
         else:
             out.append(None)
+
     return out
+
 
 def _rsi_series(closes, period: int = 14):
     n = len(closes)
@@ -33,13 +39,13 @@ def _rsi_series(closes, period: int = 14):
     avg_gain = gains / period
     avg_loss = losses / period
 
-    def _calc_rsi(ag, al):
+    def calc_rsi(ag, al):
         if al == 0:
             return 100.0
         rs = ag / al
         return 100.0 - (100.0 / (1.0 + rs))
 
-    rsis[period] = _calc_rsi(avg_gain, avg_loss)
+    rsis[period] = calc_rsi(avg_gain, avg_loss)
 
     for i in range(period + 1, n):
         diff = closes[i] - closes[i - 1]
@@ -48,9 +54,10 @@ def _rsi_series(closes, period: int = 14):
 
         avg_gain = ((avg_gain * (period - 1)) + gain) / period
         avg_loss = ((avg_loss * (period - 1)) + loss) / period
-        rsis[i] = _calc_rsi(avg_gain, avg_loss)
+        rsis[i] = calc_rsi(avg_gain, avg_loss)
 
     return rsis
+
 
 def build_indicator_series(ticker: str, period: str = "6mo", interval: str = "1d"):
     t = yf.Ticker(ticker)
@@ -76,5 +83,5 @@ def build_indicator_series(ticker: str, period: str = "6mo", interval: str = "1d
         "sma20": sma20,
         "sma50": sma50,
         "rsi14": rsi14,
-        "updatedAt": int(time.time())
+        "updatedAt": int(time.time()),
     }

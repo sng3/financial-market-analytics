@@ -94,3 +94,29 @@ export async function fetchIndicators(ticker: string): Promise<IndicatorsRespons
 
   return res.json();
 }
+
+export type HistoryPoint = {
+  t: string;
+  v: number;
+};
+
+export type HistoryResponse = {
+  ticker: string;
+  range: string;
+  series: HistoryPoint[];
+};
+
+export async function fetchHistory(
+  ticker: string,
+  range: string = "1Y"
+): Promise<HistoryResponse> {
+  const response = await fetch(
+    `http://127.0.0.1:5000/api/stocks/history?ticker=${encodeURIComponent(ticker)}&range=${encodeURIComponent(range)}`
+  );
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch stock history");
+  }
+
+  return response.json();
+}
