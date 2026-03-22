@@ -43,7 +43,6 @@ export default function TechnicalIndicatorsCard({ rsi, smaTrend }: Props) {
   const [infoOpen, setInfoOpen] = useState(false);
 
   const status = rsi >= 70 ? "Overbought" : rsi <= 30 ? "Oversold" : "Neutral";
-
   const smaLabel =
     smaTrend === "Up" ? "Uptrend" : smaTrend === "Down" ? "Downtrend" : "Flat";
 
@@ -57,19 +56,34 @@ export default function TechnicalIndicatorsCard({ rsi, smaTrend }: Props) {
           </div>
         }
       >
-        <div style={{ display: "grid", gap: 16 }}>
-          {/* RSI row */}
-          <div className="rowWrap" style={{ justifyContent: "space-between" }}>
-            <div style={{ color: "var(--muted)" }}>RSI (14)</div>
-            <div style={{ fontWeight: 800 }}>
-              {rsi.toFixed(0)} <span className="badge">{status}</span>
+        <div style={{ display: "grid", gap: 10 }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr auto",
+              gap: 12,
+              alignItems: "center",
+              padding: "4px 0",
+            }}
+          >
+            <div className="terminalSectionLabel">RSI (14)</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ fontWeight: 900, fontSize: 18 }}>{rsi.toFixed(0)}</div>
+              <span className="badge">{status}</span>
             </div>
           </div>
 
-          {/* SMA row */}
-          <div className="rowWrap" style={{ justifyContent: "space-between" }}>
-            <div style={{ color: "var(--muted)" }}>SMA Trend</div>
-            <div style={{ fontWeight: 800 }}>{smaLabel}</div>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr auto",
+              gap: 12,
+              alignItems: "center",
+              padding: "4px 0",
+            }}
+          >
+            <div className="terminalSectionLabel">SMA Trend</div>
+            <div style={{ fontWeight: 900, fontSize: 18 }}>{smaLabel}</div>
           </div>
         </div>
       </Card>
@@ -84,22 +98,18 @@ export default function TechnicalIndicatorsCard({ rsi, smaTrend }: Props) {
             <b>RSI (Relative Strength Index)</b> is a momentum indicator that measures
             how strong recent price movements are on a scale from 0 to 100.
           </div>
-
           <div>
             Typical interpretation: RSI ≥ <b>70</b> may suggest overbought conditions,
             RSI ≤ <b>30</b> may suggest oversold conditions.
           </div>
-
           <div>
             <b>SMA (Simple Moving Average)</b> is the average price over a defined
             time period. It helps smooth price data to identify overall trend direction.
           </div>
-
           <div>
             When price or a shorter SMA is above a longer SMA, it may suggest an
             uptrend. Below may suggest a downtrend. Similar values may indicate a flat trend.
           </div>
-
           <div>
             These indicators are educational tools and should not be used alone
             to make investment decisions.

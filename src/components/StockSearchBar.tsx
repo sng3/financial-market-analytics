@@ -102,3 +102,4 @@ export default function StockSearchBar({ onSelectTicker }: Props) {
     </div>
   );
 }
+

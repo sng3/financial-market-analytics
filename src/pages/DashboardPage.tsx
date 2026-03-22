@@ -1,37 +1,38 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 
-import { fetchStock, fetchSentiment, fetchIndicators } from "../services/api";
+import {
+  fetchStock,
+  fetchSentiment,
+  fetchIndicators,
+  fetchHistory,
+  fetchPrediction,
+} from "../services/api";
+
 import type {
   StockResponse,
   SentimentResponse,
   IndicatorsResponse,
+  HistoryPoint,
+  PredictionResponse,
 } from "../services/api";
 
 import StockSearchBar from "../components/StockSearchBar";
 import PriceOverviewCard from "../components/PriceOverviewCard";
-import HistoricalChartCard from "../components/HistoricalChartCard";
+import HistoricalChartCard, {
+  type HistoryRange,
+} from "../components/HistoricalChartCard";
 import TechnicalIndicatorsCard from "../components/TechnicalIndicatorsCard";
 import SentimentCard from "../components/SentimentCard";
 import PredictionCard from "../components/PredictionCard";
-import RiskRecommendationCard from "../components/RiskRecommendationCard";
 import ExportModal from "../components/ExportModal";
 import Card from "../components/Card";
+
+type RiskProfile = "Conservative" | "Moderate" | "Aggressive";
 
 function nowTimeString() {
   const d = new Date();
   return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-}
-
-// Coerce backend values into the exact union type the card expects
-function coerceSmaTrend(v: unknown): "Up" | "Down" | "Flat" {
-  if (v === "Up" || v === "Down" || v === "Flat") return v;
-  if (typeof v === "string") {
-    const s = v.toLowerCase();
-    if (s.includes("up")) return "Up";
-    if (s.includes("down")) return "Down";
-  }
-  return "Flat";
 }
 
 export default function DashboardPage() {
@@ -42,69 +43,103 @@ export default function DashboardPage() {
   const [ticker, setTicker] = useState(initial.toUpperCase());
   const [exportOpen, setExportOpen] = useState(false);
 
-  // Stock (real-time)
   const [stock, setStock] = useState<StockResponse | null>(null);
   const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState<string>("");
+  const [err, setErr] = useState("");
 
-  // Sentiment
   const [sentiment, setSentiment] = useState<SentimentResponse | null>(null);
-  const [sentLoading, setSentLoading] = useState(false); // keep state, but do not render a loading message
-  const [sentErr, setSentErr] = useState<string>("");
+  const [sentErr, setSentErr] = useState("");
 
-  // Technical Indicators
   const [indicators, setIndicators] = useState<IndicatorsResponse | null>(null);
-  const [indLoading, setIndLoading] = useState(false); // keep state, but do not render a loading message
-  const [indErr, setIndErr] = useState<string>("");
+  const [indErr, setIndErr] = useState("");
 
-  // ----------------------------
-  // Fetch stock whenever ticker changes
-  // ----------------------------
+  const [historySeries, setHistorySeries] = useState<HistoryPoint[]>([]);
+  const [historyErr, setHistoryErr] = useState("");
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [selectedRange, setSelectedRange] = useState<HistoryRange>("1Y");
+
+  const [prediction, setPrediction] = useState<PredictionResponse | null>(null);
+  const [predictionErr, setPredictionErr] = useState("");
+
+  const [riskProfile, setRiskProfile] = useState<RiskProfile>("Moderate");
+
   useEffect(() => {
     const run = async () => {
       setLoading(true);
       setErr("");
+
       try {
         const data = await fetchStock(ticker);
         setStock(data);
-      } catch (e: unknown) {
-        const anyE = e as any;
+      } catch (e: any) {
         setStock(null);
-        setErr(anyE?.response?.data?.error ?? "Failed to fetch stock data");
+        setErr(e?.response?.data?.error ?? "Failed to fetch stock data");
       } finally {
         setLoading(false);
       }
     };
+
     run();
   }, [ticker]);
 
-  // ----------------------------
-  // Poll sentiment every X seconds (and immediately once)
-  // ----------------------------
+  useEffect(() => {
+    const run = async () => {
+      setHistoryLoading(true);
+      setHistoryErr("");
+
+      try {
+        const data = await fetchHistory(ticker, selectedRange);
+        setHistorySeries(data.series ?? []);
+      } catch (e: any) {
+        setHistorySeries([]);
+        setHistoryErr(
+          e?.response?.data?.error ?? "Failed to fetch historical data"
+        );
+      } finally {
+        setHistoryLoading(false);
+      }
+    };
+
+    run();
+  }, [ticker, selectedRange]);
+
+  useEffect(() => {
+    const run = async () => {
+      setPredictionErr("");
+
+      try {
+        const data = await fetchPrediction(ticker, riskProfile);
+        setPrediction(data);
+      } catch (e: any) {
+        setPrediction(null);
+        setPredictionErr(
+          e?.response?.data?.error ?? "Failed to fetch prediction"
+        );
+      }
+    };
+
+    run();
+  }, [ticker, riskProfile]);
+
   useEffect(() => {
     let alive = true;
 
     const load = async () => {
-      setSentLoading(true);
       setSentErr("");
+
       try {
         const data = await fetchSentiment(ticker);
         if (alive) setSentiment(data);
-      } catch (e: unknown) {
-        const anyE = e as any;
+      } catch (e: any) {
         if (alive) {
           setSentiment(null);
-          setSentErr(anyE?.response?.data?.error ?? "Failed to fetch sentiment");
+          setSentErr(e?.response?.data?.error ?? "Failed to fetch sentiment");
         }
-      } finally {
-        if (alive) setSentLoading(false);
       }
     };
 
     load();
-
-    const intervalSeconds = 30;
-    const id = window.setInterval(load, intervalSeconds * 1000);
+    const id = window.setInterval(load, 30000);
 
     return () => {
       alive = false;
@@ -112,33 +147,25 @@ export default function DashboardPage() {
     };
   }, [ticker]);
 
-  // ----------------------------
-  // Poll indicators every X seconds (and immediately once)
-  // ----------------------------
   useEffect(() => {
     let alive = true;
 
     const load = async () => {
-      setIndLoading(true);
       setIndErr("");
+
       try {
         const data = await fetchIndicators(ticker);
         if (alive) setIndicators(data);
-      } catch (e: unknown) {
-        const anyE = e as any;
+      } catch (e: any) {
         if (alive) {
           setIndicators(null);
-          setIndErr(anyE?.response?.data?.error ?? "Failed to fetch indicators");
+          setIndErr(e?.response?.data?.error ?? "Failed to fetch indicators");
         }
-      } finally {
-        if (alive) setIndLoading(false);
       }
     };
 
     load();
-
-    const intervalSeconds = 30;
-    const id = window.setInterval(load, intervalSeconds * 1000);
+    const id = window.setInterval(load, 30000);
 
     return () => {
       alive = false;
@@ -146,7 +173,6 @@ export default function DashboardPage() {
     };
   }, [ticker]);
 
-  // Use real data if available; fallback if not
   const overview = {
     ticker: stock?.ticker ?? ticker,
     name: stock?.name ?? "Example Company",
@@ -157,17 +183,6 @@ export default function DashboardPage() {
     marketStatus: "Open" as const,
   };
 
-  // Placeholder series (replace later with real historical data)
-  const series = useMemo(
-    () =>
-      Array.from({ length: 120 }, (_, i) => ({
-        t: `T${i}`,
-        v: 160 + i * 0.2 + Math.sin(i / 6) * 2,
-      })),
-    [ticker]
-  );
-
-  // Convert backend indicator arrays into single values for the card
   const latestRsi =
     indicators?.rsi14
       ?.slice()
@@ -196,9 +211,6 @@ export default function DashboardPage() {
     }
   }
 
-  const rsiValue = latestRsi;
-  const smaTrendValue = derivedSmaTrend;
-
   return (
     <div className="container">
       <div style={{ margin: "14px 0" }}>
@@ -211,75 +223,122 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* Stock loading / error (optional: keep loading, usually not annoying) */}
       {loading && (
         <div style={{ marginTop: 12, color: "var(--muted)" }}>Loading...</div>
       )}
       {err && <div style={{ marginTop: 12, color: "var(--red)" }}>{err}</div>}
 
-      <PriceOverviewCard {...overview} />
-
-      <div className="grid2" style={{ marginTop: 14 }}>
-        <HistoricalChartCard series={series} />
-
-        <div>
-          {/* Indicators error only (no loading flicker) */}
-          {indErr && (
-            <div style={{ marginBottom: 10, color: "var(--red)" }}>{indErr}</div>
-          )}
-
-          <TechnicalIndicatorsCard rsi={rsiValue} smaTrend={smaTrendValue} />
-        </div>
+      <div style={{ marginTop: 14 }}>
+        <PriceOverviewCard {...overview} />
       </div>
 
-      <div className="grid2equal" style={{ marginTop: 14 }}>
-        <div>
-          {/* Sentiment error only (no loading flicker) */}
-          {sentErr && (
-            <div style={{ marginBottom: 10, color: "var(--red)" }}>{sentErr}</div>
+      <div className="dashboardGrid" style={{ marginTop: 18 }}>
+        <div className="span12">
+          {historyLoading && (
+            <div style={{ marginBottom: 10, color: "var(--muted)" }}>
+              Loading historical data...
+            </div>
           )}
 
-          <SentimentCard
-            label={sentiment?.label ?? "Neutral"}
-            score={sentiment?.score ?? 0}
-            confidence={sentiment?.confidence ?? 0}
-            items={(sentiment?.items ?? []).map((x) => {
-              const publishedAt =
-                typeof x.publishedAt === "number"
-                  ? new Date(x.publishedAt * 1000).toISOString()
-                  : x.publishedAt ?? null;
+          {historyErr && (
+            <div style={{ marginBottom: 10, color: "var(--red)" }}>
+              {historyErr}
+            </div>
+          )}
 
-              return {
-                title: x.title,
-                url: x.url,
-                imageUrl: x.imageUrl,
-                score: x.score,
-                publisher: x.publisher,
-                publishedAt,
-              };
-            })}
-            health={
-              sentiment?.health ?? {
-                provider: "none",
-                status: "error",
-                warning: "No data",
-              }
-            }
+          <HistoricalChartCard
+            series={historySeries}
+            selectedRange={selectedRange}
+            onRangeChange={setSelectedRange}
           />
         </div>
 
-        <PredictionCard horizon="7-day" trend="Up" confidence={78} />
+        <div className="spanLeftTop">
+          {indErr && (
+            <div style={{ marginBottom: 10, color: "var(--red)" }}>
+              {indErr}
+            </div>
+          )}
+
+          <TechnicalIndicatorsCard
+            rsi={latestRsi}
+            smaTrend={derivedSmaTrend}
+          />
+        </div>
+
+        <div className="spanRightTall">
+          {predictionErr && (
+            <div style={{ marginBottom: 10, color: "var(--red)" }}>
+              {predictionErr}
+            </div>
+          )}
+
+          <PredictionCard
+            horizon={prediction?.horizon ?? "7-day"}
+            trend={prediction?.trend ?? "Stable"}
+            confidence={prediction?.confidence ?? 0}
+            sentimentLabel={prediction?.sentimentLabel}
+            sentimentScore={prediction?.sentimentScore}
+            interpretation={prediction?.interpretation}
+            suggestedAction={prediction?.suggestedAction}
+            actionReason={prediction?.actionReason}
+            explanation={prediction?.explanation}
+            riskMessage={prediction?.riskMessage}
+            risk={riskProfile}
+            onChangeRisk={setRiskProfile}
+          />
+        </div>
+
+        <div className="spanLeftBottom" style={{ minHeight: "100%" }}>
+          {sentErr && (
+            <div style={{ marginBottom: 10, color: "var(--red)" }}>
+              {sentErr}
+            </div>
+          )}
+
+          <div style={{ height: "100%" }}>
+            <SentimentCard
+              label={sentiment?.label ?? "Neutral"}
+              score={sentiment?.score ?? 0}
+              confidence={sentiment?.confidence ?? 0}
+              items={(sentiment?.items ?? []).map((x) => {
+                const publishedAt =
+                  typeof x.publishedAt === "number"
+                    ? new Date(x.publishedAt * 1000).toISOString()
+                    : x.publishedAt ?? null;
+
+                return {
+                  title: x.title,
+                  url: x.url,
+                  imageUrl: x.imageUrl,
+                  score: x.score,
+                  publisher: x.publisher,
+                  publishedAt,
+                };
+              })}
+              health={
+                sentiment?.health ?? {
+                  provider: "none",
+                  status: "error",
+                  warning: "No data",
+                }
+              }
+            />
+          </div>
+        </div>
       </div>
 
-      <div style={{ marginTop: 14 }}>
-        <RiskRecommendationCard />
-      </div>
-
-      <div style={{ marginTop: 14 }}>
+      <div style={{ marginTop: 18 }}>
         <Card title="Actions">
           <div className="rowWrap">
             <button className="btn">★ Add to Watchlist</button>
-            <button className="btn">⏰ Set Alert</button>
+
+            {riskProfile === "Conservative" ? (
+              <button className="btn">⚠ Review Risk</button>
+            ) : (
+              <button className="btn">⏰ Set Alert</button>
+            )}
+
             <button
               className="btn btnPrimary"
               onClick={() => setExportOpen(true)}

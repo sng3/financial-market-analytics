@@ -176,7 +176,8 @@ export default function SentimentCard({
             background: "rgba(255,255,255,0.02)",
             overflow: "hidden",
             position: "relative",
-            height: 310,
+            height: 420,
+            minHeight: 420,
           }}
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => setHovered(false)}
@@ -195,7 +196,7 @@ export default function SentimentCard({
             >
               <div
                 style={{
-                  height: 160,
+                  height: 200,
                   background: "rgba(255,255,255,0.04)",
                 }}
               >
@@ -262,7 +263,7 @@ export default function SentimentCard({
                     lineHeight: 1.2,
                     color: "rgba(255,255,255,0.92)",
                     display: "-webkit-box",
-                    WebkitLineClamp: 3,
+                    WebkitLineClamp: 4,
                     WebkitBoxOrient: "vertical",
                     overflow: "hidden",
                   }}

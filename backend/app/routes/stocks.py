@@ -3,6 +3,7 @@ from app.services.cache import cache_get, cache_set
 from app.services.market_data import search_tickers, get_quote, get_history_by_range
 from app.services.indicators_service import build_indicator_series
 from app.services.sentiment_service import get_sentiment
+from app.services.prediction_service import predict_stock_trend
 
 stocks_bp = Blueprint("stocks", __name__)
 
@@ -13,6 +14,7 @@ def search():
         return jsonify(search_tickers(q))
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 @stocks_bp.get("/api/stock")
 def stock():
@@ -32,6 +34,7 @@ def stock():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
 @stocks_bp.get("/api/sentiment")
 def sentiment():
     ticker = request.args.get("ticker", "").upper().strip()
@@ -49,6 +52,7 @@ def sentiment():
         return jsonify(payload)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 @stocks_bp.get("/api/indicator_series")
 def indicator_series():
@@ -70,6 +74,7 @@ def indicator_series():
         return jsonify(payload)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 @stocks_bp.get("/api/history")
 def history():
@@ -93,9 +98,33 @@ def history():
     except Exception as e:
         return jsonify({"error": f"Failed to fetch history: {str(e)}"}), 500
 
+
+@stocks_bp.get("/api/prediction")
+def prediction():
+    ticker = request.args.get("ticker", "").upper().strip()
+    risk_profile = (request.args.get("risk") or "Moderate").strip()
+
+    if not ticker:
+        return jsonify({"error": "ticker is required"}), 400
+
+    cache_key = f"prediction:{ticker}:{risk_profile}"
+    cached = cache_get(cache_key)
+    if cached:
+        return jsonify(cached)
+
+    try:
+        payload = predict_stock_trend(ticker, risk_profile=risk_profile)
+        cache_set(cache_key, payload, ttl_seconds=1800)
+        return jsonify(payload)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @stocks_bp.get("/api/debug_tables")
 def debug_tables():
     from app.db import get_db
     db = get_db()
-    rows = db.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;").fetchall()
+    rows = db.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;"
+    ).fetchall()
     return jsonify([r["name"] for r in rows])

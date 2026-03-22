@@ -58,12 +58,13 @@ export type SentimentHealth = {
 export type SentimentResponse = {
   ticker: string;
   label: "Positive" | "Neutral" | "Negative";
-  score: number;        // -1..1
-  confidence: number;   // 0..1
+  score: number;
+  confidence: number;
   updatedAt: string;
   items: SentimentItem[];
   health: SentimentHealth;
 };
+
 export async function fetchSentiment(
   ticker: string
 ): Promise<SentimentResponse> {
@@ -73,6 +74,9 @@ export async function fetchSentiment(
   return res.data as SentimentResponse;
 }
 
+/* =========================
+   Indicators
+========================= */
 export type IndicatorsResponse = {
   ticker: string;
   period: string;
@@ -85,16 +89,18 @@ export type IndicatorsResponse = {
   updatedAt: number;
 };
 
-export async function fetchIndicators(ticker: string): Promise<IndicatorsResponse> {
-  const res = await fetch(`/api/indicator_series?ticker=${encodeURIComponent(ticker)}`);
-
-  if (!res.ok) {
-    throw new Error("Failed to fetch indicators");
-  }
-
-  return res.json();
+export async function fetchIndicators(
+  ticker: string
+): Promise<IndicatorsResponse> {
+  const res = await axios.get(`${API_BASE}/api/indicator_series`, {
+    params: { ticker, period: "6mo", interval: "1d" },
+  });
+  return res.data as IndicatorsResponse;
 }
 
+/* =========================
+   History
+========================= */
 export type HistoryPoint = {
   t: string;
   v: number;
@@ -110,13 +116,36 @@ export async function fetchHistory(
   ticker: string,
   range: string = "1Y"
 ): Promise<HistoryResponse> {
-  const response = await fetch(
-    `http://127.0.0.1:5000/api/stocks/history?ticker=${encodeURIComponent(ticker)}&range=${encodeURIComponent(range)}`
-  );
+  const res = await axios.get(`${API_BASE}/api/history`, {
+    params: { ticker, range },
+  });
+  return res.data as HistoryResponse;
+}
 
-  if (!response.ok) {
-    throw new Error("Failed to fetch stock history");
-  }
+/* =========================
+   Prediction
+========================= */
+export type PredictionResponse = {
+  ticker: string;
+  horizon: string;
+  trend: "Up" | "Down" | "Stable";
+  confidence: number;
+  featuresUsed: string[];
+  sentimentScore: number;
+  sentimentLabel: "Positive" | "Neutral" | "Negative";
+  explanation: string;
+  interpretation: string;
+  suggestedAction: "Opportunity" | "Watchlist" | "Caution";
+  actionReason: string;
+  riskMessage: string;
+};
 
-  return response.json();
+export async function fetchPrediction(
+  ticker: string,
+  risk: "Conservative" | "Moderate" | "Aggressive" = "Moderate"
+): Promise<PredictionResponse> {
+  const res = await axios.get(`${API_BASE}/api/prediction`, {
+    params: { ticker, risk },
+  });
+  return res.data as PredictionResponse;
 }
