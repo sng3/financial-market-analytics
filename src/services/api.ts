@@ -149,3 +149,25 @@ export async function fetchPrediction(
   });
   return res.data as PredictionResponse;
 }
+
+/* =========================
+   Watchlists
+========================= */
+export type Watchlist = {
+  id: number;
+  user_id: number;
+  name: string;
+};
+
+export async function fetchUserWatchlists(userId: number): Promise<Watchlist[]> {
+  const res = await axios.get(`${API_BASE}/api/users/${userId}/watchlists`);
+  return res.data.watchlists as Watchlist[];
+}
+
+export async function addToWatchlist(watchlistId: number, ticker: string) {
+  const res = await axios.post(
+    `${API_BASE}/api/watchlists/${watchlistId}/tickers`,
+    { ticker }
+  );
+  return res.data;
+}

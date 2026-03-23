@@ -7,6 +7,8 @@ import {
   fetchIndicators,
   fetchHistory,
   fetchPrediction,
+  addToWatchlist,
+  fetchUserWatchlists
 } from "../services/api";
 
 import type {
@@ -211,6 +213,27 @@ export default function DashboardPage() {
     }
   }
 
+  const handleAddWatchlist = async () => {
+    try {
+      const userId = 1;
+
+      const watchlists = await fetchUserWatchlists(userId);
+
+      if (!watchlists.length) {
+        alert("No watchlist found for this user.");
+        return;
+      }
+
+      const defaultWatchlistId = watchlists[0].id;
+
+      await addToWatchlist(defaultWatchlistId, ticker);
+
+      alert(`${ticker} added to watchlist`);
+    } catch {
+      alert("Failed to add to watchlist");
+    }
+  };
+
   return (
     <div className="container">
       <div style={{ margin: "14px 0" }}>
@@ -331,7 +354,9 @@ export default function DashboardPage() {
       <div style={{ marginTop: 18 }}>
         <Card title="Actions">
           <div className="rowWrap">
-            <button className="btn">★ Add to Watchlist</button>
+            <button className="btn" onClick={handleAddWatchlist}>
+              ★ Add to Watchlist
+            </button>
 
             {riskProfile === "Conservative" ? (
               <button className="btn">⚠ Review Risk</button>

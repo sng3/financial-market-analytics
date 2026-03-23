@@ -13,7 +13,135 @@
 # from app.services.sentiment_service import get_sentiment
 
 
-# def predict_stock_trend(ticker: str) -> Dict[str, Any]:
+# def build_ai_interpretation(
+#     trend: str,
+#     confidence: float,
+#     sentiment_score: float,
+#     risk_profile: str = "Moderate",
+# ) -> Dict[str, str]:
+#     risk_profile = (risk_profile or "Moderate").strip()
+
+#     interpretation = ""
+#     suggested_action = "Watchlist"
+#     action_reason = ""
+#     risk_message = ""
+
+#     strong_bullish = trend == "Up" and confidence >= 70 and sentiment_score >= 0.15
+#     mild_bullish = trend == "Up" and confidence >= 60
+#     bearish = trend == "Down" and confidence >= 60
+#     weak_signal = confidence < 55
+#     mixed_signal = not strong_bullish and not bearish and not weak_signal
+
+#     # Base interpretation
+#     if strong_bullish:
+#         interpretation = "Bullish short-term outlook with supportive confirmation."
+#     elif bearish or weak_signal:
+#         interpretation = "Bearish or weak short-term outlook with limited confirmation."
+#     else:
+#         interpretation = "Mixed short-term outlook requiring additional confirmation."
+
+#     # Suggested action by risk profile
+#     if risk_profile == "Conservative":
+#         if strong_bullish:
+#             suggested_action = "Watchlist"
+#             action_reason = (
+#                 "Although the signal is positive, conservative users typically wait for stronger confirmation before acting."
+#             )
+#         elif bearish or weak_signal:
+#             suggested_action = "Caution"
+#             action_reason = (
+#                 "The signal is either weak or bearish, which is less suitable for a conservative profile."
+#             )
+#         else:
+#             suggested_action = "Caution"
+#             action_reason = (
+#                 "Mixed conditions usually favor patience for a conservative investor."
+#             )
+
+#     elif risk_profile == "Aggressive":
+#         if strong_bullish or mild_bullish:
+#             suggested_action = "Opportunity"
+#             action_reason = (
+#                 "The selected aggressive profile is more willing to act on bullish momentum and moderate confirmation."
+#             )
+#         elif bearish:
+#             suggested_action = "Caution"
+#             action_reason = (
+#                 "Even for aggressive users, a bearish signal suggests downside risk and requires discipline."
+#             )
+#         else:
+#             suggested_action = "Watchlist"
+#             action_reason = (
+#                 "The setup is not strong enough yet, but an aggressive profile may continue monitoring for entry."
+#             )
+
+#     else:  # Moderate
+#         if strong_bullish:
+#             suggested_action = "Opportunity"
+#             action_reason = (
+#                 "The signal shows upward trend, supportive sentiment, and relatively strong confirmation."
+#             )
+#         elif bearish or weak_signal:
+#             suggested_action = "Caution"
+#             action_reason = (
+#                 "The model sees downside risk or insufficient confirmation for a balanced investor."
+#             )
+#         else:
+#             suggested_action = "Watchlist"
+#             action_reason = (
+#                 "Signals are mixed, so monitoring may be more appropriate than acting immediately."
+#             )
+
+#     # Risk profile interpretation text
+#     if risk_profile == "Conservative":
+#         if trend == "Down":
+#             risk_message = (
+#                 "Conservative profile: this setup suggests caution and waiting for stronger confirmation before acting."
+#             )
+#         elif trend == "Up" and confidence >= 75:
+#             risk_message = (
+#                 "Conservative profile: this may be worth monitoring, but confirmation and tighter risk control remain important."
+#             )
+#         else:
+#             risk_message = (
+#                 "Conservative profile: avoid weaker signals unless they are supported by stronger confirmation."
+#             )
+#     elif risk_profile == "Aggressive":
+#         if trend == "Up":
+#             risk_message = (
+#                 "Aggressive profile: this setup may support a higher-risk growth opportunity if clear entry and exit rules are used."
+#             )
+#         elif trend == "Down":
+#             risk_message = (
+#                 "Aggressive profile: this may reflect downside momentum, but strict risk controls remain essential."
+#             )
+#         else:
+#             risk_message = (
+#                 "Aggressive profile: a neutral setup may still be monitored for momentum improvement."
+#             )
+#     else:
+#         if trend == "Up":
+#             risk_message = (
+#                 "Moderate profile: this may support a balanced opportunity if technical and sentiment conditions remain aligned."
+#             )
+#         elif trend == "Down":
+#             risk_message = (
+#                 "Moderate profile: this suggests caution until technical conditions improve."
+#             )
+#         else:
+#             risk_message = (
+#                 "Moderate profile: a neutral outlook may justify patience rather than immediate action."
+#             )
+
+#     return {
+#         "interpretation": interpretation,
+#         "suggestedAction": suggested_action,
+#         "actionReason": action_reason,
+#         "riskMessage": risk_message,
+#     }
+
+
+# def predict_stock_trend(ticker: str, risk_profile: str = "Moderate") -> Dict[str, Any]:
 #     ticker = (ticker or "").strip().upper()
 #     if not ticker:
 #         raise ValueError("ticker required")
@@ -23,7 +151,6 @@
 #     if df is None or df.empty or "Close" not in df.columns:
 #         raise RuntimeError(f"No data found for {ticker}")
 
-#     # Pull latest sentiment
 #     try:
 #         sentiment_payload = get_sentiment(ticker)
 #         sentiment_score = float(sentiment_payload.get("score", 0.0))
@@ -69,6 +196,12 @@
 #         sentiment_score=sentiment_score,
 #     )
 
+#     ai_fields = build_ai_interpretation(
+#         trend=predicted_label,
+#         confidence=confidence,
+#         sentiment_score=sentiment_score,
+#         risk_profile=risk_profile,
+#     )
 
 #     return {
 #         "ticker": ticker,
@@ -79,6 +212,10 @@
 #         "sentimentScore": sentiment_score,
 #         "sentimentLabel": sentiment_label,
 #         "explanation": explanation,
+#         "interpretation": ai_fields["interpretation"],
+#         "suggestedAction": ai_fields["suggestedAction"],
+#         "actionReason": ai_fields["actionReason"],
+#         "riskMessage": ai_fields["riskMessage"],
 #     }
 
 from __future__ import annotations
@@ -109,72 +246,122 @@ def build_ai_interpretation(
     action_reason = ""
     risk_message = ""
 
-    if trend == "Up" and confidence >= 70 and sentiment_score >= 0.15:
-        interpretation = "Bullish short-term outlook with supportive confirmation."
-        suggested_action = "Opportunity" if risk_profile != "Conservative" else "Watchlist"
-        action_reason = (
-            "Trend is upward, model confidence is relatively strong, and sentiment is supportive."
+    strong_bullish = trend == "Up" and confidence >= 70 and sentiment_score >= 0.15
+    mild_bullish = trend == "Up" and confidence >= 60
+    bearish = trend == "Down" and confidence >= 60
+    weak_signal = confidence < 55
+
+    # Simple interpretation for beginner users
+    if strong_bullish:
+        interpretation = (
+            "The model sees a positive short-term trend. "
+            "Recent price movement and market sentiment both support the chance of the stock moving higher."
         )
-    elif trend == "Down" or confidence < 55:
-        interpretation = "Bearish or weak short-term outlook with limited confirmation."
-        suggested_action = "Caution"
-        action_reason = (
-            "The model sees downside risk or insufficient confirmation strength for a favorable setup."
+    elif bearish or weak_signal:
+        interpretation = (
+            "The model sees a weak or negative short-term trend. "
+            "Current signals suggest the stock may face downward pressure or uncertain movement."
         )
     else:
-        interpretation = "Mixed short-term outlook requiring additional confirmation."
-        suggested_action = "Watchlist"
-        action_reason = (
-            "Signals are not fully aligned, so the stock may be better monitored than acted on immediately."
+        interpretation = (
+            "The signals are mixed. "
+            "Some indicators look positive, but others are neutral or weak."
         )
 
+    # Suggested action based on selected risk profile
+    if risk_profile == "Conservative":
+        if strong_bullish:
+            suggested_action = "Watchlist"
+            action_reason = (
+                "Even though the signal is positive, conservative investors usually wait for stronger confirmation before taking action."
+            )
+        elif bearish or weak_signal:
+            suggested_action = "Caution"
+            action_reason = (
+                "The signal is weak or negative, which may carry higher risk for conservative investors."
+            )
+        else:
+            suggested_action = "Caution"
+            action_reason = (
+                "Because the signals are mixed, waiting and monitoring the stock may be safer."
+            )
+
+    elif risk_profile == "Aggressive":
+        if strong_bullish or mild_bullish:
+            suggested_action = "Opportunity"
+            action_reason = (
+                "Aggressive investors are more comfortable acting on early upward signals and momentum."
+            )
+        elif bearish:
+            suggested_action = "Caution"
+            action_reason = (
+                "Even aggressive investors should be careful when the model detects a downward trend."
+            )
+        else:
+            suggested_action = "Watchlist"
+            action_reason = (
+                "The signal is not strong yet, but aggressive investors may continue watching for a possible entry point."
+            )
+
+    else:  # Moderate
+        if strong_bullish:
+            suggested_action = "Opportunity"
+            action_reason = (
+                "The model detects an upward trend with support from both market sentiment and price movement."
+            )
+        elif bearish or weak_signal:
+            suggested_action = "Caution"
+            action_reason = (
+                "The model sees possible downside risk or weak confirmation, which may not be ideal for a balanced investor."
+            )
+        else:
+            suggested_action = "Watchlist"
+            action_reason = (
+                "Because the signals are mixed, it may be better to monitor the stock before making a decision."
+            )
+
+    # Risk profile message
     if risk_profile == "Conservative":
         if trend == "Down":
             risk_message = (
-                "Conservative profile: this setup suggests caution and waiting for stronger confirmation before acting."
+                "Conservative profile: this setup suggests caution. Waiting for clearer signals may help reduce risk."
             )
         elif trend == "Up" and confidence >= 75:
             risk_message = (
-                "Conservative profile: this may be worth monitoring, but confirmation and tight risk control remain important."
+                "Conservative profile: this trend may be worth monitoring, but stronger confirmation is still important before acting."
             )
         else:
             risk_message = (
-                "Conservative profile: avoid weaker signals unless they are supported by stronger confirmation."
+                "Conservative profile: weaker signals are usually avoided until stronger confirmation appears."
             )
+
     elif risk_profile == "Aggressive":
         if trend == "Up":
             risk_message = (
-                "Aggressive profile: this may support a higher-risk growth opportunity if your entry and exit rules are defined."
-            )
-            if confidence >= 60:
-                suggested_action = "Opportunity"
-        elif trend == "Down":
-            risk_message = (
-                "Aggressive profile: this may reflect downside momentum, but strict risk controls are essential."
-            )
-        else:
-            risk_message = (
-                "Aggressive profile: the current outlook is neutral, so stronger momentum may be needed before acting."
-            )
-    else:
-        if trend == "Up":
-            risk_message = (
-                "Moderate profile: this may support a balanced opportunity if technical and sentiment conditions remain aligned."
+                "Aggressive profile: the model detects upward momentum, which may present a higher-risk growth opportunity."
             )
         elif trend == "Down":
             risk_message = (
-                "Moderate profile: this suggests caution until technical conditions improve."
+                "Aggressive profile: the model detects downward momentum, so risk management is especially important."
             )
         else:
             risk_message = (
-                "Moderate profile: a neutral outlook may justify patience rather than immediate action."
+                "Aggressive profile: a neutral signal may still be monitored for improving momentum."
             )
 
-    if risk_profile == "Conservative" and suggested_action == "Opportunity":
-        suggested_action = "Watchlist"
-        action_reason += (
-            " Because the selected risk profile is conservative, the signal is better treated as a monitored opportunity."
-        )
+    else:  # Moderate
+        if trend == "Up":
+            risk_message = (
+                "Moderate profile: the signals may support a balanced opportunity if conditions remain stable."
+            )
+        elif trend == "Down":
+            risk_message = (
+                "Moderate profile: the model suggests caution until market signals improve."
+            )
+        else:
+            risk_message = (
+                "Moderate profile: a neutral outlook may justify waiting rather than acting immediately."
+            )
 
     return {
         "interpretation": interpretation,
@@ -194,6 +381,7 @@ def predict_stock_trend(ticker: str, risk_profile: str = "Moderate") -> Dict[str
     if df is None or df.empty or "Close" not in df.columns:
         raise RuntimeError(f"No data found for {ticker}")
 
+    # Get latest sentiment
     try:
         sentiment_payload = get_sentiment(ticker)
         sentiment_score = float(sentiment_payload.get("score", 0.0))
@@ -202,6 +390,7 @@ def predict_stock_trend(ticker: str, risk_profile: str = "Moderate") -> Dict[str
         sentiment_score = 0.0
         sentiment_label = "Neutral"
 
+    # Build features
     data = build_feature_dataframe(df, sentiment_score=sentiment_score)
     feature_cols = get_feature_columns()
 
@@ -211,6 +400,7 @@ def predict_stock_trend(ticker: str, risk_profile: str = "Moderate") -> Dict[str
     X = data[feature_cols]
     y = data["target"]
 
+    # Train on earlier data
     split_index = int(len(data) * 0.8)
     X_train = X.iloc[:split_index]
     y_train = y.iloc[:split_index]
@@ -223,6 +413,7 @@ def predict_stock_trend(ticker: str, risk_profile: str = "Moderate") -> Dict[str
     )
     model.fit(X_train, y_train)
 
+    # Predict using latest available row
     latest_features = X.iloc[[-1]]
     latest_row = data.iloc[-1]
 
