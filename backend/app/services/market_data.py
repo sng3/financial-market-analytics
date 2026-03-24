@@ -48,11 +48,28 @@ def search_tickers(q: str) -> List[Dict[str, str]]:
     if not q:
         return []
 
-    sample = _stub_search_universe()
-    q_upper = q.upper()
-    q_lower = q.lower()
-    return [x for x in sample if q_upper in x["ticker"] or q_lower in x["name"].lower()]
+    results = []
 
+    try:
+        search = yf.Search(q, max_results=10)
+        quotes = getattr(search, "quotes", []) or []
+
+        for item in quotes:
+            symbol = item.get("symbol")
+            name = item.get("shortname") or item.get("longname")
+
+            if not symbol or not name:
+                continue
+
+            results.append({
+                "ticker": symbol,
+                "name": name
+            })
+
+    except Exception:
+        pass
+
+    return results[:10]
 
 def get_quote(ticker: str) -> Dict[str, Any]:
     ticker = (ticker or "").strip().upper()

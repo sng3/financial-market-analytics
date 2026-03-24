@@ -10,11 +10,14 @@ stocks_bp = Blueprint("stocks", __name__)
 @stocks_bp.get("/api/search")
 def search():
     q = request.args.get("q", "").strip()
+
+    if not q:
+        return jsonify({"results": []})
+
     try:
         return jsonify(search_tickers(q))
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
 
 @stocks_bp.get("/api/stock")
 def stock():
