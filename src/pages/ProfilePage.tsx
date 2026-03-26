@@ -192,6 +192,7 @@ export default function ProfilePage() {
   const handleLogout = () => {
     localStorage.removeItem("user");
     nav("/login");
+    window.location.reload();
   };
 
   return (

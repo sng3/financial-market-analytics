@@ -52,6 +52,7 @@ export default function SignupPage() {
 
       localStorage.setItem("user", JSON.stringify(user));
       nav("/onboarding");
+      window.location.reload();
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
@@ -169,3 +170,4 @@ export default function SignupPage() {
     </div>
   );
 }
+

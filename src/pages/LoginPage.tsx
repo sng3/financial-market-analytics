@@ -27,6 +27,7 @@ export default function LoginPage() {
 
       localStorage.setItem("user", JSON.stringify(user));
       nav("/dashboard");
+      window.location.reload();
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
@@ -85,3 +86,4 @@ export default function LoginPage() {
     </div>
   );
 }
+
