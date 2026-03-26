@@ -50,8 +50,18 @@ def sentiment():
         return jsonify(cached)
 
     try:
-        payload = get_sentiment(ticker)
-        cache_set(cache_key, payload, ttl_seconds=600)
+        company_name = ""
+        try:
+            quote = get_quote(ticker)
+            company_name = str(quote.get("name") or "").strip()
+        except Exception:
+            company_name = ""
+
+        payload = get_sentiment(ticker, company_name=company_name)
+
+        if payload.get("items"):
+            cache_set(cache_key, payload, ttl_seconds=600)
+
         return jsonify(payload)
     except Exception as e:
         return jsonify({"error": str(e)}), 500

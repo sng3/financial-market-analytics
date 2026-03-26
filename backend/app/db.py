@@ -3,6 +3,7 @@ from flask import g
 
 DB_PATH = "app.db"
 
+
 def get_db():
     if "db" not in g:
         g.db = sqlite3.connect(DB_PATH, timeout=10)
@@ -12,10 +13,12 @@ def get_db():
         g.db.execute("PRAGMA synchronous = NORMAL;")
     return g.db
 
+
 def close_db(_=None):
     db = g.pop("db", None)
     if db is not None:
         db.close()
+
 
 def init_db():
     db = get_db()
@@ -23,7 +26,23 @@ def init_db():
     db.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            email TEXT UNIQUE NOT NULL
+            first_name TEXT NOT NULL DEFAULT '',
+            last_name TEXT NOT NULL DEFAULT '',
+            email TEXT UNIQUE NOT NULL,
+            phone TEXT DEFAULT '',
+            password_hash TEXT NOT NULL DEFAULT '',
+            risk_tolerance TEXT NOT NULL DEFAULT 'Moderate',
+            experience TEXT NOT NULL DEFAULT 'Beginner',
+            goal TEXT NOT NULL DEFAULT 'Learning',
+            horizon TEXT NOT NULL DEFAULT '1 - 5 Years',
+            favorite_sectors TEXT NOT NULL DEFAULT '[]',
+            email_alerts INTEGER NOT NULL DEFAULT 1,
+            price_alerts INTEGER NOT NULL DEFAULT 1,
+            news_alerts INTEGER NOT NULL DEFAULT 1,
+            earnings_alerts INTEGER NOT NULL DEFAULT 0,
+            country TEXT NOT NULL DEFAULT 'United States',
+            time_zone TEXT NOT NULL DEFAULT 'America/New_York',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
     """)
 
@@ -32,7 +51,7 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL,
             name TEXT NOT NULL,
-            FOREIGN KEY(user_id) REFERENCES users(id)
+            FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
         );
     """)
 
@@ -42,11 +61,10 @@ def init_db():
             watchlist_id INTEGER NOT NULL,
             ticker TEXT NOT NULL,
             UNIQUE(watchlist_id, ticker),
-            FOREIGN KEY(watchlist_id) REFERENCES watchlists(id)
+            FOREIGN KEY(watchlist_id) REFERENCES watchlists(id) ON DELETE CASCADE
         );
     """)
 
-    # Cache table (from your big file)
     db.execute("""
         CREATE TABLE IF NOT EXISTS cache (
             cache_key TEXT PRIMARY KEY,
@@ -56,9 +74,41 @@ def init_db():
         );
     """)
 
-    # FK-safe seed (no hardcoded IDs)
-    db.execute("INSERT OR IGNORE INTO users (email) VALUES (?);", ("will@utoledo.edu",))
-    user_row = db.execute("SELECT id FROM users WHERE email = ?;", ("will@utoledo.edu",)).fetchone()
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS alerts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            ticker TEXT NOT NULL,
+            condition TEXT NOT NULL,
+            price REAL NOT NULL,
+            status TEXT NOT NULL DEFAULT 'Active',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+    """)
+
+    db.execute("""
+        INSERT OR IGNORE INTO users (
+            first_name,
+            last_name,
+            email,
+            phone,
+            password_hash
+        )
+        VALUES (?, ?, ?, ?, ?);
+    """, (
+        "Will",
+        "Demo",
+        "will@utoledo.edu",
+        "",
+        "demo-seed-password-hash"
+    ))
+
+    user_row = db.execute(
+        "SELECT id FROM users WHERE email = ?;",
+        ("will@utoledo.edu",)
+    ).fetchone()
+
     if user_row:
         db.execute(
             "INSERT OR IGNORE INTO watchlists (user_id, name) VALUES (?, ?);",
@@ -66,4 +116,3 @@ def init_db():
         )
 
     db.commit()
-

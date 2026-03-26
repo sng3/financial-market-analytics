@@ -3,12 +3,14 @@ from flask_cors import CORS
 
 from app.db import init_db, close_db
 from app.routes import stocks_bp, watchlists_bp
+from app.routes.auth import bp as auth_bp
 
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 app.register_blueprint(stocks_bp)
 app.register_blueprint(watchlists_bp)
+app.register_blueprint(auth_bp)
 
 @app.get("/api/health")
 def health():

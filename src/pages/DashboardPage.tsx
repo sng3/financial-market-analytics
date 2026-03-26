@@ -8,7 +8,7 @@ import {
   fetchHistory,
   fetchPrediction,
   addToWatchlist,
-  fetchUserWatchlists
+  fetchUserWatchlists,
 } from "../services/api";
 
 import type {
@@ -31,11 +31,6 @@ import ExportModal from "../components/ExportModal";
 import Card from "../components/Card";
 
 type RiskProfile = "Conservative" | "Moderate" | "Aggressive";
-
-function nowTimeString() {
-  const d = new Date();
-  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-}
 
 export default function DashboardPage() {
   const [params] = useSearchParams();
@@ -175,16 +170,6 @@ export default function DashboardPage() {
     };
   }, [ticker]);
 
-  const overview = {
-    ticker: stock?.ticker ?? ticker,
-    name: stock?.name ?? "Example Company",
-    price: stock?.price ?? 182.45,
-    change: stock?.change ?? 2.13,
-    changePct: stock?.changePct ?? 1.18,
-    updatedAt: stock?.updatedAt ?? nowTimeString(),
-    marketStatus: "Open" as const,
-  };
-
   const latestRsi =
     indicators?.rsi14
       ?.slice()
@@ -249,10 +234,25 @@ export default function DashboardPage() {
       {loading && (
         <div style={{ marginTop: 12, color: "var(--muted)" }}>Loading...</div>
       )}
+
       {err && <div style={{ marginTop: 12, color: "var(--red)" }}>{err}</div>}
 
       <div style={{ marginTop: 14 }}>
-        <PriceOverviewCard {...overview} />
+        <PriceOverviewCard
+          ticker={stock?.ticker ?? ticker}
+          name={stock?.name ?? "Example Company"}
+          price={stock?.price ?? 182.45}
+          change={stock?.change ?? 2.13}
+          changePct={stock?.changePct ?? 1.18}
+          updatedAt={stock?.updatedAt ?? new Date().toISOString()}
+          marketStatus={stock?.marketStatus ?? "Closed"}
+          atCloseUpdatedAt={stock?.atCloseUpdatedAt ?? null}
+          extendedLabel={stock?.extendedLabel ?? null}
+          extendedPrice={stock?.extendedPrice ?? null}
+          extendedChange={stock?.extendedChange ?? null}
+          extendedChangePct={stock?.extendedChangePct ?? null}
+          extendedUpdatedAt={stock?.extendedUpdatedAt ?? null}
+        />
       </div>
 
       <div className="dashboardGrid" style={{ marginTop: 18 }}>

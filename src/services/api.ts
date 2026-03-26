@@ -1,4 +1,5 @@
 import axios from "axios";
+import type { UserProfile } from "../types/user";
 
 const API_BASE = "http://127.0.0.1:5000";
 
@@ -13,6 +14,13 @@ export type StockResponse = {
   change: number;
   changePct: number;
   updatedAt: string;
+  marketStatus: "Open" | "After Hours" | "Closed";
+  atCloseUpdatedAt?: string | null;
+  extendedLabel?: "After Hours" | "Overnight" | "Pre-Market" | null;
+  extendedPrice?: number | null;
+  extendedChange?: number | null;
+  extendedChangePct?: number | null;
+  extendedUpdatedAt?: string | null;
 };
 
 export async function fetchStock(ticker: string): Promise<StockResponse> {
@@ -170,4 +178,40 @@ export async function addToWatchlist(watchlistId: number, ticker: string) {
     { ticker }
   );
   return res.data;
+}
+
+type SignupPayload = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  password: string;
+};
+
+type LoginPayload = {
+  email: string;
+  password: string;
+};
+
+export async function signupUser(payload: SignupPayload): Promise<UserProfile> {
+  const res = await axios.post(`${API_BASE}/api/signup`, payload);
+  return res.data.user as UserProfile;
+}
+
+export async function loginUser(payload: LoginPayload): Promise<UserProfile> {
+  const res = await axios.post(`${API_BASE}/api/login`, payload);
+  return res.data.user as UserProfile;
+}
+
+export async function fetchProfile(userId: number): Promise<UserProfile> {
+  const res = await axios.get(`${API_BASE}/api/profile/${userId}`);
+  return res.data.user as UserProfile;
+}
+
+export async function updateProfile(
+  userId: number,
+  payload: UserProfile
+): Promise<UserProfile> {
+  const res = await axios.put(`${API_BASE}/api/profile/${userId}`, payload);
+  return res.data.user as UserProfile;
 }

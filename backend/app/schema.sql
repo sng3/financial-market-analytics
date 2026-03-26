@@ -1,0 +1,20 @@
+CREATE TABLE IF NOT EXISTS users (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  first_name TEXT NOT NULL,
+  last_name TEXT NOT NULL,
+  email TEXT NOT NULL UNIQUE,
+  phone TEXT,
+  password_hash TEXT NOT NULL,
+  risk_tolerance TEXT DEFAULT 'Moderate',
+  experience TEXT DEFAULT 'Beginner',
+  goal TEXT DEFAULT 'Learning',
+  horizon TEXT DEFAULT '1 - 5 Years',
+  favorite_sectors TEXT DEFAULT '[]',
+  email_alerts INTEGER DEFAULT 1,
+  price_alerts INTEGER DEFAULT 1,
+  news_alerts INTEGER DEFAULT 1,
+  earnings_alerts INTEGER DEFAULT 0,
+  country TEXT DEFAULT 'United States',
+  time_zone TEXT DEFAULT 'America/New_York',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

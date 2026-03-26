@@ -1,223 +1,3 @@
-# from __future__ import annotations
-
-# from typing import Any, Dict
-
-# import yfinance as yf
-# from sklearn.ensemble import RandomForestClassifier
-
-# from app.services.feature_engineering_service import (
-#     build_feature_dataframe,
-#     get_feature_columns,
-#     build_prediction_explanation,
-# )
-# from app.services.sentiment_service import get_sentiment
-
-
-# def build_ai_interpretation(
-#     trend: str,
-#     confidence: float,
-#     sentiment_score: float,
-#     risk_profile: str = "Moderate",
-# ) -> Dict[str, str]:
-#     risk_profile = (risk_profile or "Moderate").strip()
-
-#     interpretation = ""
-#     suggested_action = "Watchlist"
-#     action_reason = ""
-#     risk_message = ""
-
-#     strong_bullish = trend == "Up" and confidence >= 70 and sentiment_score >= 0.15
-#     mild_bullish = trend == "Up" and confidence >= 60
-#     bearish = trend == "Down" and confidence >= 60
-#     weak_signal = confidence < 55
-#     mixed_signal = not strong_bullish and not bearish and not weak_signal
-
-#     # Base interpretation
-#     if strong_bullish:
-#         interpretation = "Bullish short-term outlook with supportive confirmation."
-#     elif bearish or weak_signal:
-#         interpretation = "Bearish or weak short-term outlook with limited confirmation."
-#     else:
-#         interpretation = "Mixed short-term outlook requiring additional confirmation."
-
-#     # Suggested action by risk profile
-#     if risk_profile == "Conservative":
-#         if strong_bullish:
-#             suggested_action = "Watchlist"
-#             action_reason = (
-#                 "Although the signal is positive, conservative users typically wait for stronger confirmation before acting."
-#             )
-#         elif bearish or weak_signal:
-#             suggested_action = "Caution"
-#             action_reason = (
-#                 "The signal is either weak or bearish, which is less suitable for a conservative profile."
-#             )
-#         else:
-#             suggested_action = "Caution"
-#             action_reason = (
-#                 "Mixed conditions usually favor patience for a conservative investor."
-#             )
-
-#     elif risk_profile == "Aggressive":
-#         if strong_bullish or mild_bullish:
-#             suggested_action = "Opportunity"
-#             action_reason = (
-#                 "The selected aggressive profile is more willing to act on bullish momentum and moderate confirmation."
-#             )
-#         elif bearish:
-#             suggested_action = "Caution"
-#             action_reason = (
-#                 "Even for aggressive users, a bearish signal suggests downside risk and requires discipline."
-#             )
-#         else:
-#             suggested_action = "Watchlist"
-#             action_reason = (
-#                 "The setup is not strong enough yet, but an aggressive profile may continue monitoring for entry."
-#             )
-
-#     else:  # Moderate
-#         if strong_bullish:
-#             suggested_action = "Opportunity"
-#             action_reason = (
-#                 "The signal shows upward trend, supportive sentiment, and relatively strong confirmation."
-#             )
-#         elif bearish or weak_signal:
-#             suggested_action = "Caution"
-#             action_reason = (
-#                 "The model sees downside risk or insufficient confirmation for a balanced investor."
-#             )
-#         else:
-#             suggested_action = "Watchlist"
-#             action_reason = (
-#                 "Signals are mixed, so monitoring may be more appropriate than acting immediately."
-#             )
-
-#     # Risk profile interpretation text
-#     if risk_profile == "Conservative":
-#         if trend == "Down":
-#             risk_message = (
-#                 "Conservative profile: this setup suggests caution and waiting for stronger confirmation before acting."
-#             )
-#         elif trend == "Up" and confidence >= 75:
-#             risk_message = (
-#                 "Conservative profile: this may be worth monitoring, but confirmation and tighter risk control remain important."
-#             )
-#         else:
-#             risk_message = (
-#                 "Conservative profile: avoid weaker signals unless they are supported by stronger confirmation."
-#             )
-#     elif risk_profile == "Aggressive":
-#         if trend == "Up":
-#             risk_message = (
-#                 "Aggressive profile: this setup may support a higher-risk growth opportunity if clear entry and exit rules are used."
-#             )
-#         elif trend == "Down":
-#             risk_message = (
-#                 "Aggressive profile: this may reflect downside momentum, but strict risk controls remain essential."
-#             )
-#         else:
-#             risk_message = (
-#                 "Aggressive profile: a neutral setup may still be monitored for momentum improvement."
-#             )
-#     else:
-#         if trend == "Up":
-#             risk_message = (
-#                 "Moderate profile: this may support a balanced opportunity if technical and sentiment conditions remain aligned."
-#             )
-#         elif trend == "Down":
-#             risk_message = (
-#                 "Moderate profile: this suggests caution until technical conditions improve."
-#             )
-#         else:
-#             risk_message = (
-#                 "Moderate profile: a neutral outlook may justify patience rather than immediate action."
-#             )
-
-#     return {
-#         "interpretation": interpretation,
-#         "suggestedAction": suggested_action,
-#         "actionReason": action_reason,
-#         "riskMessage": risk_message,
-#     }
-
-
-# def predict_stock_trend(ticker: str, risk_profile: str = "Moderate") -> Dict[str, Any]:
-#     ticker = (ticker or "").strip().upper()
-#     if not ticker:
-#         raise ValueError("ticker required")
-
-#     df = yf.Ticker(ticker).history(period="5y", interval="1d")
-
-#     if df is None or df.empty or "Close" not in df.columns:
-#         raise RuntimeError(f"No data found for {ticker}")
-
-#     try:
-#         sentiment_payload = get_sentiment(ticker)
-#         sentiment_score = float(sentiment_payload.get("score", 0.0))
-#         sentiment_label = sentiment_payload.get("label", "Neutral")
-#     except Exception:
-#         sentiment_score = 0.0
-#         sentiment_label = "Neutral"
-
-#     data = build_feature_dataframe(df, sentiment_score=sentiment_score)
-#     feature_cols = get_feature_columns()
-
-#     if len(data) < 120:
-#         raise RuntimeError("Not enough historical data to train prediction model")
-
-#     X = data[feature_cols]
-#     y = data["target"]
-
-#     split_index = int(len(data) * 0.8)
-#     X_train = X.iloc[:split_index]
-#     y_train = y.iloc[:split_index]
-
-#     model = RandomForestClassifier(
-#         n_estimators=200,
-#         max_depth=8,
-#         min_samples_leaf=3,
-#         random_state=42,
-#     )
-#     model.fit(X_train, y_train)
-
-#     latest_features = X.iloc[[-1]]
-#     latest_row = data.iloc[-1]
-
-#     predicted_label = str(model.predict(latest_features)[0])
-#     class_probs = model.predict_proba(latest_features)[0]
-#     classes = list(model.classes_)
-
-#     prob_map = {label: float(prob) for label, prob in zip(classes, class_probs)}
-#     confidence = round(prob_map.get(predicted_label, 0.0) * 100, 2)
-
-#     explanation = build_prediction_explanation(
-#         latest_row,
-#         predicted_label,
-#         sentiment_score=sentiment_score,
-#     )
-
-#     ai_fields = build_ai_interpretation(
-#         trend=predicted_label,
-#         confidence=confidence,
-#         sentiment_score=sentiment_score,
-#         risk_profile=risk_profile,
-#     )
-
-#     return {
-#         "ticker": ticker,
-#         "horizon": "7-day",
-#         "trend": predicted_label,
-#         "confidence": confidence,
-#         "featuresUsed": feature_cols,
-#         "sentimentScore": sentiment_score,
-#         "sentimentLabel": sentiment_label,
-#         "explanation": explanation,
-#         "interpretation": ai_fields["interpretation"],
-#         "suggestedAction": ai_fields["suggestedAction"],
-#         "actionReason": ai_fields["actionReason"],
-#         "riskMessage": ai_fields["riskMessage"],
-#     }
-
 from __future__ import annotations
 
 from typing import Any, Dict
@@ -394,10 +174,16 @@ def predict_stock_trend(ticker: str, risk_profile: str = "Moderate") -> Dict[str
     data = build_feature_dataframe(df, sentiment_score=sentiment_score)
     feature_cols = get_feature_columns()
 
-    if len(data) < 120:
-        raise RuntimeError("Not enough historical data to train prediction model")
+    import numpy as np
 
-    X = data[feature_cols]
+    # Clean dataset first
+    data = data.replace([np.inf, -np.inf], np.nan)
+    data = data.dropna(subset=feature_cols + ["target"])
+
+    if len(data) < 120:
+        raise RuntimeError("Not enough valid historical data to train prediction model")
+
+    X = data[feature_cols].fillna(0)
     y = data["target"]
 
     # Train on earlier data
@@ -414,7 +200,7 @@ def predict_stock_trend(ticker: str, risk_profile: str = "Moderate") -> Dict[str
     model.fit(X_train, y_train)
 
     # Predict using latest available row
-    latest_features = X.iloc[[-1]]
+    latest_features = X.iloc[[-1]].replace([np.inf, -np.inf], 0).fillna(0)
     latest_row = data.iloc[-1]
 
     predicted_label = str(model.predict(latest_features)[0])

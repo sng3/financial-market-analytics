@@ -20,14 +20,10 @@ type Health = {
 type Props = {
   label: "Positive" | "Neutral" | "Negative";
   score: number;
-  confidence: number; // 0..1
+  confidence: number; // 0..100
   items: Item[];
   health: Health;
 };
-
-function clamp01(x: number) {
-  return Math.max(0, Math.min(1, x));
-}
 
 function fmtTime(iso?: string | null) {
   if (!iso) return "";
@@ -112,7 +108,7 @@ export default function SentimentCard({
   // keep health in props for later, avoid lint unused
   void health;
 
-  const confPct = Math.round(clamp01(confidence) * 100);
+  const confPct = Math.max(0, Math.min(100, Math.round(confidence * 10) / 10));
 
   const slides = useMemo(() => {
     return (items ?? [])
