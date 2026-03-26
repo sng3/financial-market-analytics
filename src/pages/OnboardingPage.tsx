@@ -71,24 +71,37 @@ type TimeZoneOption = {
   label: string;
 };
 
-const timeZoneOptions: TimeZoneOption[] = [
-  { value: "America/Los_Angeles", label: "UTC -7  PDT  Pacific Daylight Time" },
-  { value: "America/Denver", label: "UTC -6  MDT  Mountain Daylight Time" },
-  { value: "America/Chicago", label: "UTC -5  CDT  Central Daylight Time" },
-  { value: "America/New_York", label: "UTC -4  EDT  Eastern Daylight Time" },
-  { value: "America/Halifax", label: "UTC -3  ADT  Atlantic Daylight Time" },
-  { value: "Europe/London", label: "UTC +0  GMT  Greenwich Mean Time" },
-  { value: "Europe/Paris", label: "UTC +1  CET  Central European Time" },
-  { value: "Europe/Athens", label: "UTC +2  EET  Eastern European Time" },
-  { value: "Asia/Dubai", label: "UTC +4  GST  Gulf Standard Time" },
-  { value: "Asia/Kolkata", label: "UTC +5:30  IST  India Standard Time" },
-  { value: "Asia/Shanghai", label: "UTC +8  CST  China Standard Time" },
-  { value: "Asia/Singapore", label: "UTC +8  SGT  Singapore Time" },
-  { value: "Asia/Kuala_Lumpur", label: "UTC +8  MYT  Malaysia Time" },
-  { value: "Asia/Tokyo", label: "UTC +9  JST  Japan Standard Time" },
-  { value: "Asia/Seoul", label: "UTC +9  KST  Korea Standard Time" },
-  { value: "Australia/Sydney", label: "UTC +10  AEST  Australian Eastern Standard Time" },
-  { value: "Pacific/Auckland", label: "UTC +12  NZST  New Zealand Standard Time" },
+export const timeZoneOptions: TimeZoneOption[] = [
+  { value: "America/New_York", label: "GMT-4  New York (US Eastern)" },
+  { value: "America/Chicago", label: "GMT-5  Chicago (US Central)" },
+  { value: "America/Denver", label: "GMT-6  Denver (US Mountain)" },
+  { value: "America/Los_Angeles", label: "GMT-7  Los Angeles (US Pacific)" },
+
+  { value: "America/Sao_Paulo", label: "GMT-3  São Paulo (Brazil)" },
+
+  { value: "Europe/London", label: "GMT+0  London (UK)" },
+  { value: "Europe/Paris", label: "GMT+1  Paris (Europe Central)" },
+  { value: "Europe/Zurich", label: "GMT+1  Zurich (Switzerland)" },
+  { value: "Europe/Frankfurt", label: "GMT+1  Frankfurt (Germany)" },
+
+  { value: "Europe/Athens", label: "GMT+2  Athens (Eastern Europe)" },
+  { value: "Africa/Johannesburg", label: "GMT+2  Johannesburg (South Africa)" },
+
+  { value: "Asia/Dubai", label: "GMT+4  Dubai (UAE)" },
+
+  { value: "Asia/Kolkata", label: "GMT+5:30  Mumbai (India)" },
+
+  { value: "Asia/Singapore", label: "GMT+8  Singapore" },
+  { value: "Asia/Hong_Kong", label: "GMT+8  Hong Kong" },
+  { value: "Asia/Shanghai", label: "GMT+8  Shanghai (China)" },
+  { value: "Asia/Kuala_Lumpur", label: "GMT+8  Kuala Lumpur (Malaysia)" },
+
+  { value: "Asia/Tokyo", label: "GMT+9  Tokyo (Japan)" },
+  { value: "Asia/Seoul", label: "GMT+9  Seoul (South Korea)" },
+
+  { value: "Australia/Sydney", label: "GMT+10  Sydney (Australia)" },
+
+  { value: "Pacific/Auckland", label: "GMT+12  Auckland (New Zealand)" },
 ];
 
 export default function OnboardingPage() {
@@ -109,7 +122,7 @@ export default function OnboardingPage() {
   const [country, setCountry] = useState("United States");
   const [timeZone, setTimeZone] = useState("America/New_York");
   const [countryQuery, setCountryQuery] = useState("United States");
-  const [timeZoneQuery, setTimeZoneQuery] = useState("UTC -4  EDT  Eastern Daylight Time");
+  const [timeZoneQuery, setTimeZoneQuery] = useState("GMT-4  New York (US Eastern)");
   const [emailAlerts, setEmailAlerts] = useState(true);
   const [priceAlerts, setPriceAlerts] = useState(true);
   const [newsAlerts, setNewsAlerts] = useState(true);

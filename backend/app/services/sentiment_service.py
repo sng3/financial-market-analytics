@@ -322,19 +322,22 @@ def _looks_financial(text: str) -> bool:
     return any(keyword in text for keyword in FINANCE_KEYWORDS)
 
 
-def _is_relevant_article(title: str, ticker: str, company_name: str) -> bool:
-    text = f"{title}".lower()
-    ticker_lower = ticker.lower()
+def _is_relevant_article(title: str, ticker: str, company_name: str, strict: bool = True) -> bool:
+    text = (title or "").lower()
+    ticker_lower = (ticker or "").lower()
     company_lower = (company_name or "").lower()
 
-    mentions_ticker = ticker_lower in text
+    mentions_ticker = ticker_lower in text if ticker_lower else False
     mentions_company = company_lower in text if company_lower else False
     mentions_finance = _looks_financial(text)
 
-    if company_lower:
-        return (mentions_company or mentions_ticker) and mentions_finance
+    if strict:
+        if company_lower:
+            return (mentions_company or mentions_ticker) and mentions_finance
+        return mentions_ticker or mentions_finance
 
-    return mentions_ticker or mentions_finance
+    # relaxed fallback mode for Yahoo Finance
+    return mentions_ticker or mentions_company or mentions_finance
 
 
 def _normalize_newsapi_item(article: dict, ticker: str, company_name: str) -> dict | None:
@@ -344,7 +347,7 @@ def _normalize_newsapi_item(article: dict, ticker: str, company_name: str) -> di
     if not title or not _is_valid_url(url):
         return None
 
-    if not _is_relevant_article(title, ticker, company_name):
+    if not _is_relevant_article(title, ticker, company_name, strict=True):
         return None
 
     source = article.get("source") or {}
@@ -396,7 +399,7 @@ def _normalize_yf_item(item: dict, ticker: str, company_name: str) -> dict | Non
     if not title or not _is_valid_url(url):
         return None
 
-    if not _is_relevant_article(title, ticker, company_name):
+    if not _is_relevant_article(title, ticker, company_name, strict=False):
         return None
 
     provider = content.get("provider") or {}
@@ -538,9 +541,24 @@ def get_sentiment(ticker: str, company_name: str = "") -> dict:
     company_name = str(company_name or "").strip()
 
     items, health = _fetch_newsapi_articles(ticker, company_name)
+    source_used = "newsapi"
 
     if not items:
-        items, health = _fetch_yfinance_articles(ticker, company_name)
+        yf_items, yf_health = _fetch_yfinance_articles(ticker, company_name)
+        if yf_items:
+            items = yf_items
+            health = yf_health
+            source_used = "yfinance"
+        else:
+            # preserve useful reason from NewsAPI if it was rate limited
+            if health.get("status") == "rate_limited":
+                health = {
+                    "provider": "newsapi",
+                    "status": "rate_limited",
+                    "warning": "News temporarily unavailable. NewsAPI rate limit reached and Yahoo Finance returned no usable articles.",
+                }
+            else:
+                health = yf_health
 
     if not items:
         return {
@@ -554,10 +572,7 @@ def get_sentiment(ticker: str, company_name: str = "") -> dict:
         }
 
     scores = [float(item["score"]) for item in items]
-
-    avg_score = sum(scores) / len(scores)
-    avg_score = round(avg_score, 4)
-
+    avg_score = round(sum(scores) / len(scores), 4)
     confidence = _confidence_from_items(scores)
 
     return {
@@ -567,5 +582,8 @@ def get_sentiment(ticker: str, company_name: str = "") -> dict:
         "confidence": confidence,
         "updatedAt": _safe_iso_now(),
         "items": items[:5],
-        "health": health,
+        "health": {
+            **health,
+            "sourceUsed": source_used,
+        },
     }

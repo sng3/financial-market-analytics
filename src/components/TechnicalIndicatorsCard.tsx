@@ -3,7 +3,7 @@ import Card from "./Card";
 import InfoDialog from "./InfoDialog";
 
 type Props = {
-  rsi: number;
+  rsi: number | null;
   smaTrend: "Up" | "Down" | "Flat";
 };
 
@@ -42,7 +42,16 @@ function InfoButton({ onClick }: { onClick: () => void }) {
 export default function TechnicalIndicatorsCard({ rsi, smaTrend }: Props) {
   const [infoOpen, setInfoOpen] = useState(false);
 
-  const status = rsi >= 70 ? "Overbought" : rsi <= 30 ? "Oversold" : "Neutral";
+  const hasRsi = typeof rsi === "number" && !Number.isNaN(rsi);
+
+  const status = !hasRsi
+    ? "Unavailable"
+    : rsi >= 70
+    ? "Overbought"
+    : rsi <= 30
+    ? "Oversold"
+    : "Neutral";
+
   const smaLabel =
     smaTrend === "Up" ? "Uptrend" : smaTrend === "Down" ? "Downtrend" : "Flat";
 
@@ -68,7 +77,9 @@ export default function TechnicalIndicatorsCard({ rsi, smaTrend }: Props) {
           >
             <div className="terminalSectionLabel">RSI (14)</div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div style={{ fontWeight: 900, fontSize: 18 }}>{rsi.toFixed(0)}</div>
+              <div style={{ fontWeight: 900, fontSize: 18 }}>
+                {hasRsi ? rsi.toFixed(0) : "N/A"}
+              </div>
               <span className="badge">{status}</span>
             </div>
           </div>

@@ -66,15 +66,6 @@ def init_db():
     """)
 
     db.execute("""
-        CREATE TABLE IF NOT EXISTS cache (
-            cache_key TEXT PRIMARY KEY,
-            payload_json TEXT NOT NULL,
-            updated_at INTEGER NOT NULL,
-            ttl_seconds INTEGER NOT NULL
-        );
-    """)
-
-    db.execute("""
         CREATE TABLE IF NOT EXISTS alerts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL,

@@ -77,39 +77,58 @@ def indicator_series():
         return jsonify({"error": "ticker is required"}), 400
 
     cache_key = f"indicator_series:{ticker}:{period}:{interval}"
-    cached = cache_get(cache_key)
-    if cached:
-        return jsonify(cached)
+
+    try:
+        cached = cache_get(cache_key)
+        if cached:
+            return jsonify(cached)
+    except Exception as e:
+        print("⚠️ Cache read failed:", e)
 
     try:
         payload = build_indicator_series(ticker, period=period, interval=interval)
-        cache_set(cache_key, payload, ttl_seconds=300)
+
+        try:
+            cache_set(cache_key, payload, ttl_seconds=300)
+        except Exception as e:
+            print("⚠️ Cache write failed:", e)
+
         return jsonify(payload)
+
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print(f"Indicator route failed for {ticker}: {e}")
+        return jsonify({
+            "ticker": ticker,
+            "period": period,
+            "interval": interval,
+            "timestamps": [],
+            "close": [],
+            "sma20": [],
+            "sma50": [],
+            "rsi14": [],
+            "updatedAt": 0,
+        })
 
 
 @stocks_bp.get("/api/history")
 def history():
     ticker = request.args.get("ticker", "").upper().strip()
-    range_value = (request.args.get("range") or "1Y").strip().upper()
+    range_value = request.args.get("range", "1Y")
 
     if not ticker:
         return jsonify({"error": "ticker is required"}), 400
 
-    cache_key = f"history:{ticker}:{range_value}"
-    cached = cache_get(cache_key)
-    if cached:
-        return jsonify(cached)
-
     try:
-        payload = get_history_by_range(ticker, range_value)
-        cache_set(cache_key, payload, ttl_seconds=300)
-        return jsonify(payload)
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
+        data = get_history_by_range(ticker, range_value)
+        return jsonify(data)
+
     except Exception as e:
-        return jsonify({"error": f"Failed to fetch history: {str(e)}"}), 500
+        print("ROUTE ERROR:", str(e))
+        return jsonify({
+            "ticker": ticker,
+            "range": range_value,
+            "series": []
+        })
 
 
 @stocks_bp.get("/api/prediction")

@@ -1,7 +1,6 @@
 import time
 import yfinance as yf
 
-
 def _rolling_sma_series(values, window: int):
     out = []
     running_sum = 0.0
@@ -60,28 +59,102 @@ def _rsi_series(closes, period: int = 14):
 
 
 def build_indicator_series(ticker: str, period: str = "6mo", interval: str = "1d"):
-    t = yf.Ticker(ticker)
-    hist = t.history(period=period, interval=interval)
+    try:
+        t = yf.Ticker(ticker)
+        hist = t.history(period=period, interval=interval)
 
-    if hist.empty or "Close" not in hist:
-        raise RuntimeError(f"no data for {ticker}")
+        if hist is None:
+            print(f"Indicator fetch failed for {ticker}: hist is None")
+            return {
+                "ticker": ticker,
+                "period": period,
+                "interval": interval,
+                "timestamps": [],
+                "close": [],
+                "sma20": [],
+                "sma50": [],
+                "rsi14": [],
+                "updatedAt": int(time.time()),
+            }
 
-    hist2 = hist.dropna(subset=["Close"]).copy()
-    closes = [float(x) for x in hist2["Close"].tolist()]
-    dates = [idx.strftime("%Y-%m-%d") for idx in hist2.index]
+        if hist.empty:
+            print(f"Indicator fetch failed for {ticker}: hist is empty")
+            return {
+                "ticker": ticker,
+                "period": period,
+                "interval": interval,
+                "timestamps": [],
+                "close": [],
+                "sma20": [],
+                "sma50": [],
+                "rsi14": [],
+                "updatedAt": int(time.time()),
+            }
 
-    sma20 = _rolling_sma_series(closes, 20)
-    sma50 = _rolling_sma_series(closes, 50)
-    rsi14 = _rsi_series(closes, 14)
+        if "Close" not in hist.columns:
+            print(f"Indicator fetch failed for {ticker}: Close column missing")
+            print("Columns returned:", list(hist.columns))
+            return {
+                "ticker": ticker,
+                "period": period,
+                "interval": interval,
+                "timestamps": [],
+                "close": [],
+                "sma20": [],
+                "sma50": [],
+                "rsi14": [],
+                "updatedAt": int(time.time()),
+            }
 
-    return {
-        "ticker": ticker,
-        "period": period,
-        "interval": interval,
-        "timestamps": dates,
-        "close": closes,
-        "sma20": sma20,
-        "sma50": sma50,
-        "rsi14": rsi14,
-        "updatedAt": int(time.time()),
-    }
+        hist2 = hist.dropna(subset=["Close"]).copy()
+        closes = [float(x) for x in hist2["Close"].tolist()]
+        dates = [idx.strftime("%Y-%m-%d") for idx in hist2.index]
+
+        print(f"{ticker} raw rows: {len(hist)}")
+        print(f"{ticker} close rows after dropna: {len(closes)}")
+
+        if len(closes) < 15:
+            print(f"Indicator fetch failed for {ticker}: not enough close values for RSI")
+            return {
+                "ticker": ticker,
+                "period": period,
+                "interval": interval,
+                "timestamps": dates,
+                "close": closes,
+                "sma20": _rolling_sma_series(closes, 20),
+                "sma50": _rolling_sma_series(closes, 50),
+                "rsi14": [None] * len(closes),
+                "updatedAt": int(time.time()),
+            }
+
+        sma20 = _rolling_sma_series(closes, 20)
+        sma50 = _rolling_sma_series(closes, 50)
+        rsi14 = _rsi_series(closes, 14)
+
+        print(f"{ticker} last 5 RSI values: {rsi14[-5:] if len(rsi14) >= 5 else rsi14}")
+
+        return {
+            "ticker": ticker,
+            "period": period,
+            "interval": interval,
+            "timestamps": dates,
+            "close": closes,
+            "sma20": sma20,
+            "sma50": sma50,
+            "rsi14": rsi14,
+            "updatedAt": int(time.time()),
+        }
+
+    except Exception as e:
+        print(f"Indicator fetch failed for {ticker}: {e}")
+        return {
+            "ticker": ticker,
+            "period": period,
+            "interval": interval,
+            "timestamps": [],
+            "close": [],
+            "sma20": [],
+            "sma50": [],
+            "rsi14": [],
+            "updatedAt": int(time.time()),
+        }

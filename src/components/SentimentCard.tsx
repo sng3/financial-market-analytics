@@ -164,6 +164,10 @@ export default function SentimentCard({
           Confidence: {confPct}%
         </div>
 
+        <div style={{ marginTop: 6, fontSize: 12, color: "rgba(203,213,225,0.6)" }}>
+          Source: {health.provider === "newsapi" ? "NewsAPI" : "Yahoo Finance"}
+        </div>
+
         <div
           style={{
             marginTop: 12,
@@ -270,7 +274,9 @@ export default function SentimentCard({
             </a>
           ) : (
             <div style={{ padding: 14, color: "var(--muted)" }}>
-              No recent sentiment data available.
+              {health?.warning
+                ? health.warning
+                : "No recent sentiment data available."}
             </div>
           )}
 

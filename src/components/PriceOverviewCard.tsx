@@ -22,32 +22,72 @@ function formatEtTime(isoString?: string | null): string {
 
   const date = new Date(isoString);
 
-  return (
-    date.toLocaleString("en-US", {
-      timeZone: "America/New_York",
-      hour: "numeric",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: true,
-    }) + " ET"
-  );
+  let userTimeZone = "America/New_York";
+
+  const savedUser = localStorage.getItem("user");
+  if (savedUser) {
+    try {
+      const user = JSON.parse(savedUser);
+      if (user.timeZone) {
+        userTimeZone = user.timeZone;
+      }
+    } catch {}
+  }
+
+  const timeText = new Intl.DateTimeFormat("en-US", {
+    timeZone: userTimeZone,
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+  }).format(date);
+
+  const zoneText =
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: userTimeZone,
+      timeZoneName: "short",
+    })
+      .formatToParts(date)
+      .find((p) => p.type === "timeZoneName")?.value ?? "";
+
+  return `${timeText} ${zoneText}`;
 }
 
 function formatUpdatedAt(isoString: string): string {
   const date = new Date(isoString);
 
-  return (
-    date.toLocaleString("en-US", {
-      timeZone: "America/New_York",
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: true,
-    }) + " ET"
-  );
+  let userTimeZone = "America/New_York";
+
+  const savedUser = localStorage.getItem("user");
+  if (savedUser) {
+    try {
+      const user = JSON.parse(savedUser);
+      if (user.timeZone) {
+        userTimeZone = user.timeZone;
+      }
+    } catch {}
+  }
+
+  const dateText = new Intl.DateTimeFormat("en-US", {
+    timeZone: userTimeZone,
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+  }).format(date);
+
+  const zoneText =
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: userTimeZone,
+      timeZoneName: "short",
+    })
+      .formatToParts(date)
+      .find((p) => p.type === "timeZoneName")?.value ?? "";
+
+  return `${dateText} ${zoneText}`;
 }
 
 export default function PriceOverviewCard(props: Props) {

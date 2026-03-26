@@ -32,6 +32,18 @@ import Card from "../components/Card";
 
 type RiskProfile = "Conservative" | "Moderate" | "Aggressive";
 
+const EMPTY_INDICATORS: IndicatorsResponse = {
+  ticker: "",
+  period: "6mo",
+  interval: "1d",
+  timestamps: [],
+  close: [],
+  sma20: [],
+  sma50: [],
+  rsi14: [],
+  updatedAt: 0,
+};
+
 export default function DashboardPage() {
   const [params] = useSearchParams();
   const nav = useNavigate();
@@ -87,6 +99,7 @@ export default function DashboardPage() {
       try {
         const data = await fetchHistory(ticker, selectedRange);
         setHistorySeries(data.series ?? []);
+        setHistoryErr("");
       } catch (e: any) {
         setHistorySeries([]);
         setHistoryErr(
@@ -126,7 +139,10 @@ export default function DashboardPage() {
 
       try {
         const data = await fetchSentiment(ticker);
-        if (alive) setSentiment(data);
+        if (alive) {
+          setSentiment(data);
+          setSentErr("");
+        }
       } catch (e: any) {
         if (alive) {
           setSentiment(null);
@@ -152,12 +168,30 @@ export default function DashboardPage() {
 
       try {
         const data = await fetchIndicators(ticker);
-        if (alive) setIndicators(data);
+
+        if (!alive) return;
+
+        setIndicators(data ?? EMPTY_INDICATORS);
+        setIndErr("");
       } catch (e: any) {
-        if (alive) {
-          setIndicators(null);
-          setIndErr(e?.response?.data?.error ?? "Failed to fetch indicators");
-        }
+        if (!alive) return;
+
+        console.error("Indicator fetch error:", e);
+
+        setIndicators((prev) => {
+          if (prev && prev.ticker === ticker) {
+            return prev;
+          }
+
+          return {
+            ...EMPTY_INDICATORS,
+            ticker,
+          };
+        });
+
+        // Do not show the red error message for indicators.
+        // Keep the card stable with safe fallback data instead.
+        setIndErr("");
       }
     };
 
@@ -174,7 +208,7 @@ export default function DashboardPage() {
     indicators?.rsi14
       ?.slice()
       .reverse()
-      .find((v: number | null) => v != null) ?? 50;
+      .find((v: number | null) => v != null) ?? null;
 
   const latestSma20 =
     indicators?.sma20

@@ -136,7 +136,20 @@ def search_tickers(q: str) -> List[Dict[str, str]]:
         seen.add(symbol)
         unique_results.append(item)
 
-    unique_results.sort(key=lambda item: ("." in item["ticker"], item["ticker"]))
+    q_upper = q.upper()
+
+    def rank(item):
+        ticker = item["ticker"]
+
+        if ticker == q_upper:
+            return (0, ticker)
+        elif ticker.startswith(q_upper):
+            return (1, ticker)
+        else:
+            return (2, ticker)
+
+    unique_results.sort(key=rank)
+
     return unique_results[:10]
 
 
@@ -336,43 +349,48 @@ def get_history(ticker: str, days: int = 30) -> Dict[str, Any]:
 
 
 def get_history_by_range(ticker: str, range_value: str = "1Y") -> Dict[str, Any]:
-    ticker = (ticker or "").strip().upper()
-    if not ticker:
-        raise ValueError("ticker required")
+    try:
+        ticker = (ticker or "").strip().upper()
+        if not ticker:
+            raise ValueError("ticker required")
 
-    period, interval = _map_range_to_period_interval(range_value)
-    t = yf.Ticker(ticker)
-    df = t.history(period=period, interval=interval)
+        period, interval = _map_range_to_period_interval(range_value)
 
-    if df is None or df.empty or "Close" not in df.columns:
+        t = yf.Ticker(ticker)
+        df = t.history(period=period, interval=interval)
+
+        if df is None or df.empty or "Close" not in df.columns:
+            return {
+                "ticker": ticker,
+                "range": range_value,
+                "series": [],
+            }
+
+        series = []
+
+        for idx, row in df.iterrows():
+            close = _safe_float(row.get("Close"))
+            if close is None:
+                continue
+
+            label = idx.strftime("%Y-%m-%d")
+
+            series.append({
+                "t": label,
+                "v": round(close, 2),
+            })
+
+        return {
+            "ticker": ticker,
+            "range": range_value,
+            "series": series,
+        }
+
+    except Exception as e:
+        print("HISTORY ERROR:", ticker, range_value, str(e))
+
         return {
             "ticker": ticker,
             "range": range_value,
             "series": [],
         }
-
-    series: List[Dict[str, Any]] = []
-
-    for idx, row in df.iterrows():
-        close = _safe_float(row.get("Close"))
-        if close is None:
-            continue
-
-        try:
-            if range_value.upper() in ("1D", "5D"):
-                label = idx.strftime("%Y-%m-%d %H:%M")
-            else:
-                label = idx.strftime("%Y-%m-%d")
-        except Exception:
-            label = str(idx)
-
-        series.append({
-            "t": label,
-            "v": round(close, 2),
-        })
-
-    return {
-        "ticker": ticker,
-        "range": range_value,
-        "series": series,
-    }
