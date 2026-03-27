@@ -1,20 +1,40 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+
+type ExportType = "pdf" | "excel";
 
 type Props = {
   open: boolean;
   onClose: () => void;
-  onExport: (type: "pdf" | "excel") => void;
+  onExport: (type: ExportType) => void | Promise<void>;
 };
 
 export default function ExportModal({ open, onClose, onExport }: Props) {
-  const [type, setType] = useState<"pdf" | "excel">("pdf");
+  const [type, setType] = useState<ExportType>("pdf");
+  const [exporting, setExporting] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setType("pdf");
+      setExporting(false);
+    }
+  }, [open]);
 
   if (!open) return null;
+
+  const handleExport = async () => {
+    try {
+      setExporting(true);
+      await onExport(type);
+    } finally {
+      setExporting(false);
+    }
+  };
 
   return (
     <div
       role="dialog"
       aria-modal="true"
+      aria-labelledby="export-modal-title"
       style={{
         position: "fixed",
         inset: 0,
@@ -24,7 +44,9 @@ export default function ExportModal({ open, onClose, onExport }: Props) {
         zIndex: 100,
         padding: 18,
       }}
-      onClick={onClose}
+      onClick={() => {
+        if (!exporting) onClose();
+      }}
     >
       <div
         style={{
@@ -37,23 +59,55 @@ export default function ExportModal({ open, onClose, onExport }: Props) {
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div style={{ fontWeight: 900, fontSize: 18 }}>Export Dashboard Report</div>
+        <div id="export-modal-title" style={{ fontWeight: 900, fontSize: 18 }}>
+          Export Dashboard Report
+        </div>
 
-        <div style={{ marginTop: 12, display: "grid", gap: 10, color: "var(--muted)" }}>
+        <div
+          style={{
+            marginTop: 12,
+            display: "grid",
+            gap: 10,
+            color: "var(--muted)",
+          }}
+        >
           <label className="row">
-            <input type="radio" checked={type === "pdf"} onChange={() => setType("pdf")} />
+            <input
+              type="radio"
+              name="exportType"
+              checked={type === "pdf"}
+              onChange={() => setType("pdf")}
+              disabled={exporting}
+            />
             PDF Summary
           </label>
 
           <label className="row">
-            <input type="radio" checked={type === "excel"} onChange={() => setType("excel")} />
+            <input
+              type="radio"
+              name="exportType"
+              checked={type === "excel"}
+              onChange={() => setType("excel")}
+              disabled={exporting}
+            />
             Excel Data
           </label>
         </div>
 
-        <div className="rowWrap" style={{ justifyContent: "flex-end", marginTop: 14 }}>
-          <button className="btn" onClick={onClose}>Cancel</button>
-          <button className="btn btnPrimary" onClick={() => onExport(type)}>Export</button>
+        <div
+          className="rowWrap"
+          style={{ justifyContent: "flex-end", marginTop: 14 }}
+        >
+          <button className="btn" onClick={onClose} disabled={exporting}>
+            Cancel
+          </button>
+          <button
+            className="btn btnPrimary"
+            onClick={handleExport}
+            disabled={exporting}
+          >
+            {exporting ? "Exporting..." : "Export"}
+          </button>
         </div>
       </div>
     </div>
