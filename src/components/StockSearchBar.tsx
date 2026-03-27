@@ -44,6 +44,8 @@ export default function StockSearchBar({
   const placeholder =
     buttonLabel === "Add"
       ? "Add stock to watchlist (e.g., TSLA)"
+      : buttonLabel === "Select"
+      ? "Search stock for alert (e.g., AAPL)"
       : "Search ticker or company name (e.g., NVDA or NVIDIA)";
 
   return (
@@ -105,7 +107,9 @@ export default function StockSearchBar({
               }}
             >
               <div style={{ fontWeight: 800 }}>{it.ticker}</div>
-              <div style={{ color: "var(--muted)", fontSize: 12 }}>{it.name}</div>
+              <div style={{ color: "var(--muted)", fontSize: 12 }}>
+                {it.name}
+              </div>
             </button>
           ))}
         </div>

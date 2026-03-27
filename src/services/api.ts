@@ -193,6 +193,9 @@ export async function removeFromWatchlist(watchlistId: number, ticker: string) {
   return res.data;
 }
 
+/* =========================
+   Profile
+========================= */
 type SignupPayload = {
   firstName: string;
   lastName: string;
@@ -231,5 +234,35 @@ export async function updateProfile(
 
 export async function deleteProfile(userId: number) {
   const res = await axios.delete(`${API_BASE}/api/profile/${userId}`);
+  return res.data;
+}
+
+/* =========================
+   Alerts
+========================= */
+export type AlertItem = {
+  id: string;
+  ticker: string;
+  condition: "Above" | "Below";
+  price: number;
+  status: "Active" | "Triggered";
+  createdAt: string;
+};
+
+export async function fetchUserAlerts(userId: number): Promise<AlertItem[]> {
+  const res = await axios.get(`${API_BASE}/api/users/${userId}/alerts`);
+  return res.data.alerts as AlertItem[];
+}
+
+export async function createAlert(
+  userId: number,
+  payload: Omit<AlertItem, "id" | "status" | "createdAt">
+) {
+  const res = await axios.post(`${API_BASE}/api/users/${userId}/alerts`, payload);
+  return res.data.alert as AlertItem;
+}
+
+export async function deleteAlert(alertId: string) {
+  const res = await axios.delete(`${API_BASE}/api/alerts/${alertId}`);
   return res.data;
 }
