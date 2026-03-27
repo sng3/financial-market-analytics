@@ -1,57 +1,5 @@
-// import React, { useEffect, useState } from "react";
-// import { useNavigate } from "react-router-dom";
-// import AlertsTable from "../components/AlertsTable";
-
-// type Alert = {
-//   id: string;
-//   ticker: string;
-//   condition: "Above" | "Below";
-//   price: number;
-//   status: "Active" | "Triggered";
-//   createdAt: string;
-// };
-
-// export default function AlertsPage() {
-//   const nav = useNavigate();
-
-//   const [alerts, setAlerts] = useState<Alert[]>([
-//     { id: "1", ticker: "AAPL", condition: "Above", price: 190, status: "Active", createdAt: "2026-02-08" },
-//     { id: "2", ticker: "TSLA", condition: "Below", price: 230, status: "Triggered", createdAt: "2026-02-06" },
-//   ]);
-
-//   useEffect(() => {
-//     const user = localStorage.getItem("user");
-//     if (!user) {
-//       nav("/login");
-//     }
-//   }, [nav]);
-
-//   return (
-//     <div className="container">
-//       <div className="pageTitle">Alerts</div>
-//       <AlertsTable
-//         alerts={alerts}
-//         onCreate={(a: { ticker: string; condition: "Above" | "Below"; price: number }) => {
-//           const id = String(Date.now());
-
-//           const newAlert: Alert = {
-//             id,
-//             ticker: a.ticker,
-//             condition: a.condition,
-//             price: a.price,
-//             status: "Active",
-//             createdAt: new Date().toISOString().slice(0, 10),
-//           };
-
-//           setAlerts((prev: Alert[]) => [...prev, newAlert]);
-//         }}
-//       />
-//     </div>
-//   );
-// }
-
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import AlertsTable from "../components/AlertsTable";
 import {
   fetchUserAlerts,
@@ -62,8 +10,12 @@ import {
 
 export default function AlertsPage() {
   const nav = useNavigate();
+  const [params] = useSearchParams();
+
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const defaultTicker = params.get("t")?.toUpperCase() || "AAPL";
 
   useEffect(() => {
     const loadAlerts = async () => {
@@ -146,6 +98,7 @@ export default function AlertsPage() {
           alerts={alerts}
           onCreate={handleCreate}
           onRemove={handleRemove}
+          defaultTicker={defaultTicker}
         />
       )}
     </div>

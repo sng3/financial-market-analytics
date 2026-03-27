@@ -429,7 +429,12 @@ export default function DashboardPage() {
             {riskProfile === "Conservative" ? (
               <button className="btn">⚠ Review Risk</button>
             ) : (
-              <button className="btn">⏰ Set Alert</button>
+              <button
+                className="btn"
+                onClick={() => nav(`/alerts?t=${encodeURIComponent(ticker)}`)}
+              >
+                ⏰ Set Alert
+              </button>
             )}
 
             <button

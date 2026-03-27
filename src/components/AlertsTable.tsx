@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Card from "./Card";
 import StockSearchBar from "./StockSearchBar";
 
@@ -15,12 +15,22 @@ type Props = {
   alerts: Alert[];
   onCreate: (a: Omit<Alert, "id" | "status" | "createdAt">) => void;
   onRemove: (id: string) => void;
+  defaultTicker?: string;
 };
 
-export default function AlertsTable({ alerts, onCreate, onRemove }: Props) {
-  const [ticker, setTicker] = useState("AAPL");
+export default function AlertsTable({
+  alerts,
+  onCreate,
+  onRemove,
+  defaultTicker = "AAPL",
+}: Props) {
+  const [ticker, setTicker] = useState(defaultTicker);
   const [condition, setCondition] = useState<"Above" | "Below">("Above");
   const [price, setPrice] = useState<number>(190);
+
+  useEffect(() => {
+    setTicker(defaultTicker);
+  }, [defaultTicker]);
 
   const handleCreate = () => {
     const normalizedTicker = ticker.trim().toUpperCase();
