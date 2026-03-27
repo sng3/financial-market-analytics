@@ -3,7 +3,6 @@ from flask import g
 
 DB_PATH = "app.db"
 
-
 def get_db():
     if "db" not in g:
         g.db = sqlite3.connect(DB_PATH, timeout=10)
@@ -13,12 +12,10 @@ def get_db():
         g.db.execute("PRAGMA synchronous = NORMAL;")
     return g.db
 
-
 def close_db(_=None):
     db = g.pop("db", None)
     if db is not None:
         db.close()
-
 
 def init_db():
     db = get_db()
@@ -79,31 +76,14 @@ def init_db():
     """)
 
     db.execute("""
-        INSERT OR IGNORE INTO users (
-            first_name,
-            last_name,
-            email,
-            phone,
-            password_hash
-        )
-        VALUES (?, ?, ?, ?, ?);
-    """, (
-        "Will",
-        "Demo",
-        "will@utoledo.edu",
-        "",
-        "demo-seed-password-hash"
-    ))
-
-    user_row = db.execute(
-        "SELECT id FROM users WHERE email = ?;",
-        ("will@utoledo.edu",)
-    ).fetchone()
-
-    if user_row:
-        db.execute(
-            "INSERT OR IGNORE INTO watchlists (user_id, name) VALUES (?, ?);",
-            (user_row["id"], "Main")
-        )
+        INSERT INTO watchlists (user_id, name)
+        SELECT u.id, 'Main'
+        FROM users u
+        WHERE NOT EXISTS (
+            SELECT 1
+            FROM watchlists w
+            WHERE w.user_id = u.id
+        );
+    """)
 
     db.commit()

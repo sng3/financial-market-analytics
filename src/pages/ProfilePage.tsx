@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import Card from "../components/Card";
 import { useNavigate } from "react-router-dom";
 import type { UserProfile } from "../types/user";
-import { fetchProfile, updateProfile } from "../services/api";
+import { fetchProfile, updateProfile, deleteProfile } from "../services/api";
 
 const defaultUser: UserProfile = {
   id: 0,
@@ -126,7 +126,9 @@ export const timeZoneOptions: TimeZoneOption[] = [
 ];
 
 function getTimeZoneLabel(value: string): string {
-  const matched = timeZoneOptions.find((option: TimeZoneOption) => option.value === value);
+  const matched = timeZoneOptions.find(
+    (option: TimeZoneOption) => option.value === value
+  );
   return matched ? matched.label : value;
 }
 
@@ -135,7 +137,9 @@ export default function ProfilePage() {
   const [user, setUser] = useState<UserProfile>(defaultUser);
   const [saved, setSaved] = useState("");
   const [countryQuery, setCountryQuery] = useState(defaultUser.country);
-  const [timeZoneQuery, setTimeZoneQuery] = useState(getTimeZoneLabel(defaultUser.timeZone));
+  const [timeZoneQuery, setTimeZoneQuery] = useState(
+    getTimeZoneLabel(defaultUser.timeZone)
+  );
 
   useEffect(() => {
     const raw = localStorage.getItem("user");
@@ -172,9 +176,10 @@ export default function ProfilePage() {
   const filteredTimeZones = useMemo(() => {
     const q = timeZoneQuery.trim().toLowerCase();
     if (!q) return timeZoneOptions;
-    return timeZoneOptions.filter((option: TimeZoneOption) =>
-      option.label.toLowerCase().includes(q) ||
-      option.value.toLowerCase().includes(q)
+    return timeZoneOptions.filter(
+      (option: TimeZoneOption) =>
+        option.label.toLowerCase().includes(q) ||
+        option.value.toLowerCase().includes(q)
     );
   }, [timeZoneQuery]);
 
@@ -208,6 +213,25 @@ export default function ProfilePage() {
     window.location.reload();
   };
 
+  const handleDeleteAccount = async () => {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete your account?\n\nThis will permanently remove your profile, watchlists, and alerts.\n\nThis cannot be undone."
+    );
+
+    if (!confirmed) return;
+
+    try {
+      await deleteProfile(user.id);
+      localStorage.removeItem("user");
+      alert("Your account has been deleted.");
+      nav("/signup");
+      window.location.reload();
+    } catch (error) {
+      console.error("Delete failed:", error);
+      alert("Failed to delete account.");
+    }
+  };
+
   return (
     <div className="container">
       <div className="pageTitle">Profile</div>
@@ -220,13 +244,17 @@ export default function ProfilePage() {
                 className="input"
                 placeholder="First Name"
                 value={user.firstName}
-                onChange={(e) => setUser({ ...user, firstName: e.target.value })}
+                onChange={(e) =>
+                  setUser({ ...user, firstName: e.target.value })
+                }
               />
               <input
                 className="input"
                 placeholder="Last Name"
                 value={user.lastName}
-                onChange={(e) => setUser({ ...user, lastName: e.target.value })}
+                onChange={(e) =>
+                  setUser({ ...user, lastName: e.target.value })
+                }
               />
             </div>
 
@@ -368,8 +396,12 @@ export default function ProfilePage() {
                   className="btn"
                   onClick={() => toggleSector(sector)}
                   style={{
-                    background: selected ? "rgba(74,144,226,0.16)" : undefined,
-                    borderColor: selected ? "rgba(74,144,226,0.5)" : undefined,
+                    background: selected
+                      ? "rgba(74,144,226,0.16)"
+                      : undefined,
+                    borderColor: selected
+                      ? "rgba(74,144,226,0.5)"
+                      : undefined,
                   }}
                 >
                   {sector}
@@ -460,8 +492,13 @@ export default function ProfilePage() {
             <button className="btn btnPrimary" onClick={handleSave}>
               Save Changes
             </button>
+
             <button className="btn" onClick={handleLogout}>
               Logout
+            </button>
+
+            <button className="btn btnDanger" onClick={handleDeleteAccount}>
+              Delete Account
             </button>
           </div>
 

@@ -48,8 +48,11 @@ export default function DashboardPage() {
   const [params] = useSearchParams();
   const nav = useNavigate();
 
-  const initial = params.get("t") ?? "AAPL";
-  const [ticker, setTicker] = useState(initial.toUpperCase());
+  const urlTicker = params.get("t")?.toUpperCase();
+  const savedTicker = localStorage.getItem("lastDashboardTicker")?.toUpperCase();
+  const initialTicker = urlTicker || savedTicker || "AAPL";
+
+  const [ticker, setTicker] = useState(initialTicker);
   const [exportOpen, setExportOpen] = useState(false);
 
   const [stock, setStock] = useState<StockResponse | null>(null);
@@ -71,6 +74,19 @@ export default function DashboardPage() {
   const [predictionErr, setPredictionErr] = useState("");
 
   const [riskProfile, setRiskProfile] = useState<RiskProfile>("Moderate");
+
+  useEffect(() => {
+    const nextTicker =
+      params.get("t")?.toUpperCase() ||
+      localStorage.getItem("lastDashboardTicker")?.toUpperCase() ||
+      "AAPL";
+
+    setTicker(nextTicker);
+  }, [params]);
+
+  useEffect(() => {
+    localStorage.setItem("lastDashboardTicker", ticker);
+  }, [ticker]);
 
   useEffect(() => {
     const run = async () => {
@@ -189,8 +205,6 @@ export default function DashboardPage() {
           };
         });
 
-        // Do not show the red error message for indicators.
-        // Keep the card stable with safe fallback data instead.
         setIndErr("");
       }
     };
@@ -234,7 +248,21 @@ export default function DashboardPage() {
 
   const handleAddWatchlist = async () => {
     try {
-      const userId = 1;
+      const userRaw = localStorage.getItem("user");
+
+      if (!userRaw) {
+        alert("Please log in first.");
+        nav("/login");
+        return;
+      }
+
+      const user = JSON.parse(userRaw);
+      const userId = user.id;
+
+      if (!userId) {
+        alert("User session is missing.");
+        return;
+      }
 
       const watchlists = await fetchUserWatchlists(userId);
 
@@ -243,12 +271,16 @@ export default function DashboardPage() {
         return;
       }
 
-      const defaultWatchlistId = watchlists[0].id;
+      const watchlistId = watchlists[0].id;
+      const res = await addToWatchlist(watchlistId, ticker);
 
-      await addToWatchlist(defaultWatchlistId, ticker);
-
-      alert(`${ticker} added to watchlist`);
-    } catch {
+      if (res.ok) {
+        alert(`${ticker} added to watchlist`);
+      } else {
+        alert(`${ticker} is already in watchlist`);
+      }
+    } catch (err) {
+      console.error(err);
       alert("Failed to add to watchlist");
     }
   };
@@ -260,8 +292,10 @@ export default function DashboardPage() {
           onSelectTicker={(t) => {
             const next = t.toUpperCase();
             setTicker(next);
+            localStorage.setItem("lastDashboardTicker", next);
             nav(`/dashboard?t=${encodeURIComponent(next)}`);
           }}
+          buttonLabel="Search"
         />
       </div>
 
@@ -388,7 +422,7 @@ export default function DashboardPage() {
       <div style={{ marginTop: 18 }}>
         <Card title="Actions">
           <div className="rowWrap">
-            <button className="btn" onClick={handleAddWatchlist}>
+            <button className="btn btnPrimary" onClick={handleAddWatchlist}>
               ★ Add to Watchlist
             </button>
 

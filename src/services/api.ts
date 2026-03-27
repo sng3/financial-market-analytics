@@ -177,6 +177,19 @@ export async function addToWatchlist(watchlistId: number, ticker: string) {
     `${API_BASE}/api/watchlists/${watchlistId}/tickers`,
     { ticker }
   );
+  
+  return res.data;
+}
+
+export async function fetchWatchlistTickers(watchlistId: number): Promise<string[]> {
+  const res = await axios.get(`${API_BASE}/api/watchlists/${watchlistId}/tickers`);
+  return res.data.tickers as string[];
+}
+
+export async function removeFromWatchlist(watchlistId: number, ticker: string) {
+  const res = await axios.delete(
+    `${API_BASE}/api/watchlists/${watchlistId}/tickers/${ticker}`
+  );
   return res.data;
 }
 
@@ -214,4 +227,9 @@ export async function updateProfile(
 ): Promise<UserProfile> {
   const res = await axios.put(`${API_BASE}/api/profile/${userId}`, payload);
   return res.data.user as UserProfile;
+}
+
+export async function deleteProfile(userId: number) {
+  const res = await axios.delete(`${API_BASE}/api/profile/${userId}`);
+  return res.data;
 }
