@@ -20,14 +20,10 @@ type Health = {
 type Props = {
   label: "Positive" | "Neutral" | "Negative";
   score: number;
-  confidence: number; // 0..1
+  confidence: number; // 0..100
   items: Item[];
   health: Health;
 };
-
-function clamp01(x: number) {
-  return Math.max(0, Math.min(1, x));
-}
 
 function fmtTime(iso?: string | null) {
   if (!iso) return "";
@@ -112,7 +108,7 @@ export default function SentimentCard({
   // keep health in props for later, avoid lint unused
   void health;
 
-  const confPct = Math.round(clamp01(confidence) * 100);
+  const confPct = Math.max(0, Math.min(100, Math.round(confidence * 10) / 10));
 
   const slides = useMemo(() => {
     return (items ?? [])
@@ -168,6 +164,10 @@ export default function SentimentCard({
           Confidence: {confPct}%
         </div>
 
+        <div style={{ marginTop: 6, fontSize: 12, color: "rgba(203,213,225,0.6)" }}>
+          Source: {health.provider === "newsapi" ? "NewsAPI" : "Yahoo Finance"}
+        </div>
+
         <div
           style={{
             marginTop: 12,
@@ -176,7 +176,8 @@ export default function SentimentCard({
             background: "rgba(255,255,255,0.02)",
             overflow: "hidden",
             position: "relative",
-            height: 310,
+            height: 420,
+            minHeight: 420,
           }}
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => setHovered(false)}
@@ -195,7 +196,7 @@ export default function SentimentCard({
             >
               <div
                 style={{
-                  height: 160,
+                  height: 200,
                   background: "rgba(255,255,255,0.04)",
                 }}
               >
@@ -262,7 +263,7 @@ export default function SentimentCard({
                     lineHeight: 1.2,
                     color: "rgba(255,255,255,0.92)",
                     display: "-webkit-box",
-                    WebkitLineClamp: 3,
+                    WebkitLineClamp: 4,
                     WebkitBoxOrient: "vertical",
                     overflow: "hidden",
                   }}
@@ -273,7 +274,9 @@ export default function SentimentCard({
             </a>
           ) : (
             <div style={{ padding: 14, color: "var(--muted)" }}>
-              No recent sentiment data available.
+              {health?.warning
+                ? health.warning
+                : "No recent sentiment data available."}
             </div>
           )}
 

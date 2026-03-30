@@ -19,27 +19,45 @@ def list_tickers(watchlist_id: int):
         "SELECT ticker FROM watchlist_items WHERE watchlist_id = ? ORDER BY ticker ASC;",
         (watchlist_id,),
     ).fetchall()
-    return jsonify({"watchlist_id": watchlist_id, "tickers": [r["ticker"] for r in rows]})
+    return jsonify({
+        "watchlist_id": watchlist_id,
+        "tickers": [r["ticker"] for r in rows]
+    })
 
 @bp.post("/watchlists/<int:watchlist_id>/tickers")
 def add_ticker(watchlist_id: int):
     data = request.get_json(silent=True) or {}
     ticker = (data.get("ticker") or "").strip().upper()
+
     if not ticker:
         return jsonify({"error": "ticker is required"}), 400
 
     db = get_db()
-    db.execute(
+
+    cur = db.execute(
         "INSERT OR IGNORE INTO watchlist_items (watchlist_id, ticker) VALUES (?, ?);",
         (watchlist_id, ticker),
     )
     db.commit()
 
-    return jsonify({"ok": True, "watchlist_id": watchlist_id, "ticker": ticker}), 201
+    if cur.rowcount == 0:
+        return jsonify({
+            "ok": False,
+            "message": "Ticker already exists in watchlist",
+            "watchlist_id": watchlist_id,
+            "ticker": ticker
+        }), 200
+
+    return jsonify({
+        "ok": True,
+        "watchlist_id": watchlist_id,
+        "ticker": ticker
+    }), 201
 
 @bp.delete("/watchlists/<int:watchlist_id>/tickers/<string:ticker>")
 def delete_ticker(watchlist_id: int, ticker: str):
     ticker = (ticker or "").strip().upper()
+
     if not ticker:
         return jsonify({"error": "ticker is required"}), 400
 

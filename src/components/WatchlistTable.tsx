@@ -51,3 +51,4 @@ export default function WatchlistTable({ items, onView, onRemove }: Props) {
     </Card>
   );
 }
+

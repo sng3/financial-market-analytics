@@ -1,110 +1,737 @@
-import React, { useEffect, useMemo, useState } from "react";
+// import React, { useEffect, useState } from "react";
+// import { useSearchParams, useNavigate } from "react-router-dom";
+
+// import {
+//   fetchStock,
+//   fetchSentiment,
+//   fetchIndicators,
+//   fetchHistory,
+//   fetchPrediction,
+//   addToWatchlist,
+//   fetchUserWatchlists,
+// } from "../services/api";
+
+// import type {
+//   StockResponse,
+//   SentimentResponse,
+//   IndicatorsResponse,
+//   HistoryPoint,
+//   PredictionResponse,
+// } from "../services/api";
+
+// import StockSearchBar from "../components/StockSearchBar";
+// import PriceOverviewCard from "../components/PriceOverviewCard";
+// import HistoricalChartCard, {
+//   type HistoryRange,
+// } from "../components/HistoricalChartCard";
+// import TechnicalIndicatorsCard from "../components/TechnicalIndicatorsCard";
+// import SentimentCard from "../components/SentimentCard";
+// import PredictionCard from "../components/PredictionCard";
+// import ExportModal from "../components/ExportModal";
+// import Card from "../components/Card";
+
+// import {
+//   exportDashboardPDF,
+//   exportDashboardExcel,
+// } from "../services/exportService";
+
+// type RiskProfile = "Conservative" | "Moderate" | "Aggressive";
+
+// const EMPTY_INDICATORS: IndicatorsResponse = {
+//   ticker: "",
+//   period: "6mo",
+//   interval: "1d",
+//   timestamps: [],
+//   close: [],
+//   sma20: [],
+//   sma50: [],
+//   rsi14: [],
+//   updatedAt: 0,
+// };
+
+// export default function DashboardPage() {
+//   const [params] = useSearchParams();
+//   const nav = useNavigate();
+
+//   const urlTicker = params.get("t")?.toUpperCase();
+//   const savedTicker = localStorage.getItem("lastDashboardTicker")?.toUpperCase();
+//   const initialTicker = urlTicker || savedTicker || "AAPL";
+
+//   const [ticker, setTicker] = useState(initialTicker);
+//   const [exportOpen, setExportOpen] = useState(false);
+
+//   const [stock, setStock] = useState<StockResponse | null>(null);
+//   const [loading, setLoading] = useState(false);
+//   const [err, setErr] = useState("");
+
+//   const [sentiment, setSentiment] = useState<SentimentResponse | null>(null);
+//   const [sentErr, setSentErr] = useState("");
+
+//   const [indicators, setIndicators] = useState<IndicatorsResponse | null>(null);
+//   const [indErr, setIndErr] = useState("");
+
+//   const [historySeries, setHistorySeries] = useState<HistoryPoint[]>([]);
+//   const [historyErr, setHistoryErr] = useState("");
+//   const [historyLoading, setHistoryLoading] = useState(false);
+//   const [selectedRange, setSelectedRange] = useState<HistoryRange>("1Y");
+
+//   const [prediction, setPrediction] = useState<PredictionResponse | null>(null);
+//   const [predictionErr, setPredictionErr] = useState("");
+
+//   const [riskProfile, setRiskProfile] = useState<RiskProfile>("Moderate");
+
+//   useEffect(() => {
+//     const nextTicker =
+//       params.get("t")?.toUpperCase() ||
+//       localStorage.getItem("lastDashboardTicker")?.toUpperCase() ||
+//       "AAPL";
+
+//     setTicker(nextTicker);
+//   }, [params]);
+
+//   useEffect(() => {
+//     localStorage.setItem("lastDashboardTicker", ticker);
+//   }, [ticker]);
+
+//   useEffect(() => {
+//     const run = async () => {
+//       setLoading(true);
+//       setErr("");
+
+//       try {
+//         const data = await fetchStock(ticker);
+//         setStock(data);
+//       } catch (e: any) {
+//         setStock(null);
+//         setErr(e?.response?.data?.error ?? "Failed to fetch stock data");
+//       } finally {
+//         setLoading(false);
+//       }
+//     };
+
+//     run();
+//   }, [ticker]);
+
+//   useEffect(() => {
+//     const run = async () => {
+//       setHistoryLoading(true);
+//       setHistoryErr("");
+
+//       try {
+//         const data = await fetchHistory(ticker, selectedRange);
+//         setHistorySeries(data.series ?? []);
+//         setHistoryErr("");
+//       } catch (e: any) {
+//         setHistorySeries([]);
+//         setHistoryErr(
+//           e?.response?.data?.error ?? "Failed to fetch historical data"
+//         );
+//       } finally {
+//         setHistoryLoading(false);
+//       }
+//     };
+
+//     run();
+//   }, [ticker, selectedRange]);
+
+//   useEffect(() => {
+//     const run = async () => {
+//       setPredictionErr("");
+
+//       try {
+//         const data = await fetchPrediction(ticker, riskProfile);
+//         setPrediction(data);
+//       } catch (e: any) {
+//         setPrediction(null);
+//         setPredictionErr(
+//           e?.response?.data?.error ?? "Failed to fetch prediction"
+//         );
+//       }
+//     };
+
+//     run();
+//   }, [ticker, riskProfile]);
+
+//   useEffect(() => {
+//     let alive = true;
+
+//     const load = async () => {
+//       setSentErr("");
+
+//       try {
+//         const data = await fetchSentiment(ticker);
+//         if (alive) {
+//           setSentiment(data);
+//           setSentErr("");
+//         }
+//       } catch (e: any) {
+//         if (alive) {
+//           setSentiment(null);
+//           setSentErr(e?.response?.data?.error ?? "Failed to fetch sentiment");
+//         }
+//       }
+//     };
+
+//     load();
+//     const id = window.setInterval(load, 30000);
+
+//     return () => {
+//       alive = false;
+//       window.clearInterval(id);
+//     };
+//   }, [ticker]);
+
+//   useEffect(() => {
+//     let alive = true;
+
+//     const load = async () => {
+//       setIndErr("");
+
+//       try {
+//         const data = await fetchIndicators(ticker);
+
+//         if (!alive) return;
+
+//         setIndicators(data ?? EMPTY_INDICATORS);
+//         setIndErr("");
+//       } catch (e: any) {
+//         if (!alive) return;
+
+//         console.error("Indicator fetch error:", e);
+
+//         setIndicators((prev) => {
+//           if (prev && prev.ticker === ticker) {
+//             return prev;
+//           }
+
+//           return {
+//             ...EMPTY_INDICATORS,
+//             ticker,
+//           };
+//         });
+
+//         setIndErr("");
+//       }
+//     };
+
+//     load();
+//     const id = window.setInterval(load, 30000);
+
+//     return () => {
+//       alive = false;
+//       window.clearInterval(id);
+//     };
+//   }, [ticker]);
+
+//   const latestRsi =
+//     indicators?.rsi14
+//       ?.slice()
+//       .reverse()
+//       .find((v: number | null) => v != null) ?? null;
+
+//   const latestSma20 =
+//     indicators?.sma20
+//       ?.slice()
+//       .reverse()
+//       .find((v: number | null) => v != null) ?? null;
+
+//   const latestSma50 =
+//     indicators?.sma50
+//       ?.slice()
+//       .reverse()
+//       .find((v: number | null) => v != null) ?? null;
+
+//   let derivedSmaTrend: "Up" | "Down" | "Flat" = "Flat";
+
+//   if (latestSma20 != null && latestSma50 != null) {
+//     if (latestSma20 > latestSma50) {
+//       derivedSmaTrend = "Up";
+//     } else if (latestSma20 < latestSma50) {
+//       derivedSmaTrend = "Down";
+//     }
+//   }
+
+//   const handleAddWatchlist = async () => {
+//     try {
+//       const userRaw = localStorage.getItem("user");
+
+//       if (!userRaw) {
+//         alert("Please log in first.");
+//         nav("/login");
+//         return;
+//       }
+
+//       const user = JSON.parse(userRaw);
+//       const userId = user.id;
+
+//       if (!userId) {
+//         alert("User session is missing.");
+//         return;
+//       }
+
+//       const watchlists = await fetchUserWatchlists(userId);
+
+//       if (!watchlists.length) {
+//         alert("No watchlist found for this user.");
+//         return;
+//       }
+
+//       const watchlistId = watchlists[0].id;
+//       const res = await addToWatchlist(watchlistId, ticker);
+
+//       if (res.ok) {
+//         alert(`${ticker} added to watchlist`);
+//       } else {
+//         alert(`${ticker} is already in watchlist`);
+//       }
+//     } catch (watchlistError) {
+//       console.error(watchlistError);
+//       alert("Failed to add to watchlist");
+//     }
+//   };
+
+//   const handleExport = async (type: "pdf" | "excel") => {
+//     try {
+//       setExportOpen(false);
+
+//       await new Promise((resolve) => setTimeout(resolve, 300));
+
+//       if (type === "pdf") {
+//         await exportDashboardPDF();
+//         return;
+//       }
+
+//       await exportDashboardExcel({
+//         ticker,
+//         companyName: stock?.name ?? "",
+
+//         stock: {
+//           price: stock?.price ?? null,
+//           change: stock?.change ?? null,
+//           changePct: stock?.changePct ?? null,
+//           updatedAt: stock?.updatedAt ?? null,
+//           marketStatus: stock?.marketStatus ?? null,
+//           atCloseUpdatedAt: stock?.atCloseUpdatedAt ?? null,
+//           extendedLabel: stock?.extendedLabel ?? null,
+//           extendedPrice: stock?.extendedPrice ?? null,
+//           extendedChange: stock?.extendedChange ?? null,
+//           extendedChangePct: stock?.extendedChangePct ?? null,
+//           extendedUpdatedAt: stock?.extendedUpdatedAt ?? null,
+//         },
+
+//         sentiment: {
+//           label: sentiment?.label ?? null,
+//           score: sentiment?.score ?? null,
+//           confidence: sentiment?.confidence ?? null,
+//           provider: sentiment?.health?.provider ?? null,
+//           status: sentiment?.health?.status ?? null,
+//           warning: sentiment?.health?.warning ?? null,
+//           items: (sentiment?.items ?? []).map((item) => ({
+//             title: item.title ?? "",
+//             publisher: item.publisher ?? "",
+//             score: item.score ?? null,
+//             publishedAt:
+//               typeof item.publishedAt === "number"
+//                 ? new Date(item.publishedAt * 1000).toISOString()
+//                 : item.publishedAt ?? null,
+//             url: item.url ?? null,
+//             imageUrl: item.imageUrl ?? null,
+//           })),
+//         },
+
+//         indicators: {
+//           latestRsi,
+//           smaTrend: derivedSmaTrend,
+//           latestSma20,
+//           latestSma50,
+//           timestamps: indicators?.timestamps ?? [],
+//           close: indicators?.close ?? [],
+//           sma20: indicators?.sma20 ?? [],
+//           sma50: indicators?.sma50 ?? [],
+//           rsi14: indicators?.rsi14 ?? [],
+//         },
+
+//         prediction: {
+//           riskProfile,
+//           horizon: prediction?.horizon ?? null,
+//           trend: prediction?.trend ?? null,
+//           confidence: prediction?.confidence ?? null,
+//           sentimentLabel: prediction?.sentimentLabel ?? null,
+//           sentimentScore: prediction?.sentimentScore ?? null,
+//           interpretation: prediction?.interpretation ?? null,
+//           suggestedAction: prediction?.suggestedAction ?? null,
+//           actionReason: prediction?.actionReason ?? null,
+//           explanation: prediction?.explanation ?? null,
+//           riskMessage: prediction?.riskMessage ?? null,
+//         },
+
+//         history: historySeries.map((point) => ({
+//           date: point.t ?? "",
+//           close: point.v ?? null,
+//         })),
+
+//         generatedAt: new Date().toLocaleString(),
+//       });
+//     } catch (exportError) {
+//       console.error("Export failed:", exportError);
+//       alert("Failed to export dashboard report");
+//     }
+//   };
+
+//   return (
+//     <div className="container">
+//       <div id="dashboard-export">
+//         <div style={{ margin: "14px 0" }}>
+//           <StockSearchBar
+//             onSelectTicker={(t) => {
+//               const next = t.toUpperCase();
+//               setTicker(next);
+//               localStorage.setItem("lastDashboardTicker", next);
+//               nav(`/dashboard?t=${encodeURIComponent(next)}`);
+//             }}
+//             buttonLabel="Search"
+//           />
+//         </div>
+
+//         {loading && (
+//           <div style={{ marginTop: 12, color: "var(--muted)" }}>Loading...</div>
+//         )}
+
+//         {err && <div style={{ marginTop: 12, color: "var(--red)" }}>{err}</div>}
+
+//         <div style={{ marginTop: 14 }}>
+//           <PriceOverviewCard
+//             ticker={stock?.ticker ?? ticker}
+//             name={stock?.name ?? "Example Company"}
+//             price={stock?.price ?? 182.45}
+//             change={stock?.change ?? 2.13}
+//             changePct={stock?.changePct ?? 1.18}
+//             updatedAt={stock?.updatedAt ?? new Date().toISOString()}
+//             marketStatus={stock?.marketStatus ?? "Closed"}
+//             atCloseUpdatedAt={stock?.atCloseUpdatedAt ?? null}
+//             extendedLabel={stock?.extendedLabel ?? null}
+//             extendedPrice={stock?.extendedPrice ?? null}
+//             extendedChange={stock?.extendedChange ?? null}
+//             extendedChangePct={stock?.extendedChangePct ?? null}
+//             extendedUpdatedAt={stock?.extendedUpdatedAt ?? null}
+//           />
+//         </div>
+
+//         <div className="dashboardGrid" style={{ marginTop: 18 }}>
+//           <div className="span12">
+//             {historyLoading && (
+//               <div style={{ marginBottom: 10, color: "var(--muted)" }}>
+//                 Loading historical data...
+//               </div>
+//             )}
+
+//             {historyErr && (
+//               <div style={{ marginBottom: 10, color: "var(--red)" }}>
+//                 {historyErr}
+//               </div>
+//             )}
+
+//             <HistoricalChartCard
+//               series={historySeries}
+//               selectedRange={selectedRange}
+//               onRangeChange={setSelectedRange}
+//             />
+//           </div>
+
+//           <div className="spanLeftTop">
+//             {indErr && (
+//               <div style={{ marginBottom: 10, color: "var(--red)" }}>
+//                 {indErr}
+//               </div>
+//             )}
+
+//             <TechnicalIndicatorsCard
+//               rsi={latestRsi}
+//               smaTrend={derivedSmaTrend}
+//             />
+//           </div>
+
+//           <div className="spanRightTall">
+//             {predictionErr && (
+//               <div style={{ marginBottom: 10, color: "var(--red)" }}>
+//                 {predictionErr}
+//               </div>
+//             )}
+
+//             <PredictionCard
+//               horizon={prediction?.horizon ?? "7-day"}
+//               trend={prediction?.trend ?? "Stable"}
+//               confidence={prediction?.confidence ?? 0}
+//               sentimentLabel={prediction?.sentimentLabel}
+//               sentimentScore={prediction?.sentimentScore}
+//               interpretation={prediction?.interpretation}
+//               suggestedAction={prediction?.suggestedAction}
+//               actionReason={prediction?.actionReason}
+//               explanation={prediction?.explanation}
+//               riskMessage={prediction?.riskMessage}
+//               risk={riskProfile}
+//               onChangeRisk={setRiskProfile}
+//             />
+//           </div>
+
+//           <div className="spanLeftBottom" style={{ minHeight: "100%" }}>
+//             {sentErr && (
+//               <div style={{ marginBottom: 10, color: "var(--red)" }}>
+//                 {sentErr}
+//               </div>
+//             )}
+
+//             <div style={{ height: "100%" }}>
+//               <SentimentCard
+//                 label={sentiment?.label ?? "Neutral"}
+//                 score={sentiment?.score ?? 0}
+//                 confidence={sentiment?.confidence ?? 0}
+//                 items={(sentiment?.items ?? []).map((x) => {
+//                   const publishedAt =
+//                     typeof x.publishedAt === "number"
+//                       ? new Date(x.publishedAt * 1000).toISOString()
+//                       : x.publishedAt ?? null;
+
+//                   return {
+//                     title: x.title,
+//                     url: x.url,
+//                     imageUrl: x.imageUrl,
+//                     score: x.score,
+//                     publisher: x.publisher,
+//                     publishedAt,
+//                   };
+//                 })}
+//                 health={
+//                   sentiment?.health ?? {
+//                     provider: "none",
+//                     status: "error",
+//                     warning: "No data",
+//                   }
+//                 }
+//               />
+//             </div>
+//           </div>
+//         </div>
+
+//         <div style={{ marginTop: 18 }}>
+//           <Card title="Actions">
+//             <div className="rowWrap">
+//               <button className="btn btnPrimary" onClick={handleAddWatchlist}>
+//                 ★ Add to Watchlist
+//               </button>
+
+//               {riskProfile === "Conservative" ? (
+//                 <button className="btn">⚠ Review Risk</button>
+//               ) : (
+//                 <button
+//                   className="btn"
+//                   onClick={() => nav(`/alerts?t=${encodeURIComponent(ticker)}`)}
+//                 >
+//                   ⏰ Set Alert
+//                 </button>
+//               )}
+
+//               <button
+//                 className="btn btnPrimary"
+//                 onClick={() => setExportOpen(true)}
+//               >
+//                 ⬇ Export
+//               </button>
+//             </div>
+//           </Card>
+//         </div>
+
+//         <div style={{ marginTop: 14, color: "var(--muted2)", fontSize: 13 }}>
+//           Educational use only. Not financial advice. All investment decisions are
+//           made at your own risk.
+//         </div>
+//       </div>
+
+//       <ExportModal
+//         open={exportOpen}
+//         onClose={() => setExportOpen(false)}
+//         onExport={handleExport}
+//       />
+//     </div>
+//   );
+// }
+
+import React, { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 
-import { fetchStock, fetchSentiment, fetchIndicators } from "../services/api";
+import {
+  fetchStock,
+  fetchSentiment,
+  fetchIndicators,
+  fetchHistory,
+  fetchPrediction,
+  addToWatchlist,
+  fetchUserWatchlists,
+} from "../services/api";
+
 import type {
   StockResponse,
   SentimentResponse,
   IndicatorsResponse,
+  HistoryPoint,
+  PredictionResponse,
 } from "../services/api";
 
 import StockSearchBar from "../components/StockSearchBar";
 import PriceOverviewCard from "../components/PriceOverviewCard";
-import HistoricalChartCard from "../components/HistoricalChartCard";
+import HistoricalChartCard, {
+  type HistoryRange,
+} from "../components/HistoricalChartCard";
 import TechnicalIndicatorsCard from "../components/TechnicalIndicatorsCard";
 import SentimentCard from "../components/SentimentCard";
 import PredictionCard from "../components/PredictionCard";
-import RiskRecommendationCard from "../components/RiskRecommendationCard";
 import ExportModal from "../components/ExportModal";
 import Card from "../components/Card";
 
-function nowTimeString() {
-  const d = new Date();
-  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-}
+import {
+  exportDashboardPDF,
+  exportDashboardExcel,
+} from "../services/exportService";
 
-// Coerce backend values into the exact union type the card expects
-function coerceSmaTrend(v: unknown): "Up" | "Down" | "Flat" {
-  if (v === "Up" || v === "Down" || v === "Flat") return v;
-  if (typeof v === "string") {
-    const s = v.toLowerCase();
-    if (s.includes("up")) return "Up";
-    if (s.includes("down")) return "Down";
-  }
-  return "Flat";
-}
+type RiskProfile = "Conservative" | "Moderate" | "Aggressive";
+
+const EMPTY_INDICATORS: IndicatorsResponse = {
+  ticker: "",
+  period: "6mo",
+  interval: "1d",
+  timestamps: [],
+  close: [],
+  sma20: [],
+  sma50: [],
+  rsi14: [],
+  updatedAt: 0,
+};
 
 export default function DashboardPage() {
   const [params] = useSearchParams();
   const nav = useNavigate();
 
-  const initial = params.get("t") ?? "AAPL";
-  const [ticker, setTicker] = useState(initial.toUpperCase());
+  const urlTicker = params.get("t")?.toUpperCase();
+  const savedTicker = localStorage.getItem("lastDashboardTicker")?.toUpperCase();
+  const initialTicker = urlTicker || savedTicker || "AAPL";
+
+  const [ticker, setTicker] = useState(initialTicker);
   const [exportOpen, setExportOpen] = useState(false);
 
-  // Stock (real-time)
   const [stock, setStock] = useState<StockResponse | null>(null);
   const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState<string>("");
+  const [err, setErr] = useState("");
 
-  // Sentiment
   const [sentiment, setSentiment] = useState<SentimentResponse | null>(null);
-  const [sentLoading, setSentLoading] = useState(false); // keep state, but do not render a loading message
-  const [sentErr, setSentErr] = useState<string>("");
+  const [sentErr, setSentErr] = useState("");
 
-  // Technical Indicators
   const [indicators, setIndicators] = useState<IndicatorsResponse | null>(null);
-  const [indLoading, setIndLoading] = useState(false); // keep state, but do not render a loading message
-  const [indErr, setIndErr] = useState<string>("");
+  const [indErr, setIndErr] = useState("");
 
-  // ----------------------------
-  // Fetch stock whenever ticker changes
-  // ----------------------------
+  const [historySeries, setHistorySeries] = useState<HistoryPoint[]>([]);
+  const [historyErr, setHistoryErr] = useState("");
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [selectedRange, setSelectedRange] = useState<HistoryRange>("1Y");
+
+  const [prediction, setPrediction] = useState<PredictionResponse | null>(null);
+  const [predictionErr, setPredictionErr] = useState("");
+
+  const [riskProfile, setRiskProfile] = useState<RiskProfile>("Moderate");
+
+  useEffect(() => {
+    const nextTicker =
+      params.get("t")?.toUpperCase() ||
+      localStorage.getItem("lastDashboardTicker")?.toUpperCase() ||
+      "AAPL";
+
+    setTicker(nextTicker);
+  }, [params]);
+
+  useEffect(() => {
+    localStorage.setItem("lastDashboardTicker", ticker);
+  }, [ticker]);
+
   useEffect(() => {
     const run = async () => {
       setLoading(true);
       setErr("");
+
       try {
         const data = await fetchStock(ticker);
         setStock(data);
-      } catch (e: unknown) {
-        const anyE = e as any;
+      } catch (e: any) {
         setStock(null);
-        setErr(anyE?.response?.data?.error ?? "Failed to fetch stock data");
+        setErr(e?.response?.data?.error ?? "Failed to fetch stock data");
       } finally {
         setLoading(false);
       }
     };
+
     run();
   }, [ticker]);
 
-  // ----------------------------
-  // Poll sentiment every X seconds (and immediately once)
-  // ----------------------------
+  useEffect(() => {
+    const run = async () => {
+      setHistoryLoading(true);
+      setHistoryErr("");
+
+      try {
+        const data = await fetchHistory(ticker, selectedRange);
+        setHistorySeries(data.series ?? []);
+        setHistoryErr("");
+      } catch (e: any) {
+        setHistorySeries([]);
+        setHistoryErr(
+          e?.response?.data?.error ?? "Failed to fetch historical data"
+        );
+      } finally {
+        setHistoryLoading(false);
+      }
+    };
+
+    run();
+  }, [ticker, selectedRange]);
+
+  useEffect(() => {
+    const run = async () => {
+      setPredictionErr("");
+
+      try {
+        const data = await fetchPrediction(ticker, riskProfile);
+        setPrediction(data);
+      } catch (e: any) {
+        setPrediction(null);
+        setPredictionErr(
+          e?.response?.data?.error ?? "Failed to fetch prediction"
+        );
+      }
+    };
+
+    run();
+  }, [ticker, riskProfile]);
+
   useEffect(() => {
     let alive = true;
 
     const load = async () => {
-      setSentLoading(true);
       setSentErr("");
+
       try {
         const data = await fetchSentiment(ticker);
-        if (alive) setSentiment(data);
-      } catch (e: unknown) {
-        const anyE = e as any;
+        if (alive) {
+          setSentiment(data);
+          setSentErr("");
+        }
+      } catch (e: any) {
         if (alive) {
           setSentiment(null);
-          setSentErr(anyE?.response?.data?.error ?? "Failed to fetch sentiment");
+          setSentErr(e?.response?.data?.error ?? "Failed to fetch sentiment");
         }
-      } finally {
-        if (alive) setSentLoading(false);
       }
     };
 
     load();
-
-    const intervalSeconds = 30;
-    const id = window.setInterval(load, intervalSeconds * 1000);
+    const id = window.setInterval(load, 30000);
 
     return () => {
       alive = false;
@@ -112,33 +739,41 @@ export default function DashboardPage() {
     };
   }, [ticker]);
 
-  // ----------------------------
-  // Poll indicators every X seconds (and immediately once)
-  // ----------------------------
   useEffect(() => {
     let alive = true;
 
     const load = async () => {
-      setIndLoading(true);
       setIndErr("");
+
       try {
         const data = await fetchIndicators(ticker);
-        if (alive) setIndicators(data);
-      } catch (e: unknown) {
-        const anyE = e as any;
-        if (alive) {
-          setIndicators(null);
-          setIndErr(anyE?.response?.data?.error ?? "Failed to fetch indicators");
-        }
-      } finally {
-        if (alive) setIndLoading(false);
+
+        if (!alive) return;
+
+        setIndicators(data ?? EMPTY_INDICATORS);
+        setIndErr("");
+      } catch (e: any) {
+        if (!alive) return;
+
+        console.error("Indicator fetch error:", e);
+
+        setIndicators((prev) => {
+          if (prev && prev.ticker === ticker) {
+            return prev;
+          }
+
+          return {
+            ...EMPTY_INDICATORS,
+            ticker,
+          };
+        });
+
+        setIndErr("");
       }
     };
 
     load();
-
-    const intervalSeconds = 30;
-    const id = window.setInterval(load, intervalSeconds * 1000);
+    const id = window.setInterval(load, 30000);
 
     return () => {
       alive = false;
@@ -146,45 +781,23 @@ export default function DashboardPage() {
     };
   }, [ticker]);
 
-  // Use real data if available; fallback if not
-  const overview = {
-    ticker: stock?.ticker ?? ticker,
-    name: stock?.name ?? "Example Company",
-    price: stock?.price ?? 182.45,
-    change: stock?.change ?? 2.13,
-    changePct: stock?.changePct ?? 1.18,
-    updatedAt: stock?.updatedAt ?? nowTimeString(),
-    marketStatus: "Open" as const,
-  };
-
-  // Placeholder series (replace later with real historical data)
-  const series = useMemo(
-    () =>
-      Array.from({ length: 120 }, (_, i) => ({
-        t: `T${i}`,
-        v: 160 + i * 0.2 + Math.sin(i / 6) * 2,
-      })),
-    [ticker]
-  );
-
-  // Convert backend indicator arrays into single values for the card
   const latestRsi =
     indicators?.rsi14
       ?.slice()
       .reverse()
-      .find((v: number | null) => v != null) ?? 50;
+      .find((v: number | null) => v != null) ?? null;
 
   const latestSma20 =
     indicators?.sma20
       ?.slice()
       .reverse()
-      .find((v: number | null) => v != null);
+      .find((v: number | null) => v != null) ?? null;
 
   const latestSma50 =
     indicators?.sma50
       ?.slice()
       .reverse()
-      .find((v: number | null) => v != null);
+      .find((v: number | null) => v != null) ?? null;
 
   let derivedSmaTrend: "Up" | "Down" | "Flat" = "Flat";
 
@@ -196,8 +809,133 @@ export default function DashboardPage() {
     }
   }
 
-  const rsiValue = latestRsi;
-  const smaTrendValue = derivedSmaTrend;
+  const handleAddWatchlist = async () => {
+    try {
+      const userRaw = localStorage.getItem("user");
+
+      if (!userRaw) {
+        alert("Please log in first.");
+        nav("/login");
+        return;
+      }
+
+      const user = JSON.parse(userRaw);
+      const userId = user.id;
+
+      if (!userId) {
+        alert("User session is missing.");
+        return;
+      }
+
+      const watchlists = await fetchUserWatchlists(userId);
+
+      if (!watchlists.length) {
+        alert("No watchlist found for this user.");
+        return;
+      }
+
+      const watchlistId = watchlists[0].id;
+      const res = await addToWatchlist(watchlistId, ticker);
+
+      if (res.ok) {
+        alert(`${ticker} added to watchlist`);
+      } else {
+        alert(`${ticker} is already in watchlist`);
+      }
+    } catch (watchlistError) {
+      console.error(watchlistError);
+      alert("Failed to add to watchlist");
+    }
+  };
+
+  const handleExport = async (type: "pdf" | "excel") => {
+    try {
+      setExportOpen(false);
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      const exportPayload = {
+        ticker,
+        companyName: stock?.name ?? "",
+
+        stock: {
+          price: stock?.price ?? null,
+          change: stock?.change ?? null,
+          changePct: stock?.changePct ?? null,
+          updatedAt: stock?.updatedAt ?? null,
+          marketStatus: stock?.marketStatus ?? null,
+          atCloseUpdatedAt: stock?.atCloseUpdatedAt ?? null,
+          extendedLabel: stock?.extendedLabel ?? null,
+          extendedPrice: stock?.extendedPrice ?? null,
+          extendedChange: stock?.extendedChange ?? null,
+          extendedChangePct: stock?.extendedChangePct ?? null,
+          extendedUpdatedAt: stock?.extendedUpdatedAt ?? null,
+        },
+
+        sentiment: {
+          label: sentiment?.label ?? null,
+          score: sentiment?.score ?? null,
+          confidence: sentiment?.confidence ?? null,
+          provider: sentiment?.health?.provider ?? null,
+          status: sentiment?.health?.status ?? null,
+          warning: sentiment?.health?.warning ?? null,
+          items: (sentiment?.items ?? []).map((item) => ({
+            title: item.title ?? "",
+            publisher: item.publisher ?? "",
+            score: item.score ?? null,
+            publishedAt:
+              typeof item.publishedAt === "number"
+                ? new Date(item.publishedAt * 1000).toISOString()
+                : item.publishedAt ?? null,
+            url: item.url ?? null,
+            imageUrl: item.imageUrl ?? null,
+          })),
+        },
+
+        indicators: {
+          latestRsi,
+          smaTrend: derivedSmaTrend,
+          latestSma20,
+          latestSma50,
+          timestamps: indicators?.timestamps ?? [],
+          close: indicators?.close ?? [],
+          sma20: indicators?.sma20 ?? [],
+          sma50: indicators?.sma50 ?? [],
+          rsi14: indicators?.rsi14 ?? [],
+        },
+
+        prediction: {
+          riskProfile,
+          horizon: prediction?.horizon ?? null,
+          trend: prediction?.trend ?? null,
+          confidence: prediction?.confidence ?? null,
+          sentimentLabel: prediction?.sentimentLabel ?? null,
+          sentimentScore: prediction?.sentimentScore ?? null,
+          interpretation: prediction?.interpretation ?? null,
+          suggestedAction: prediction?.suggestedAction ?? null,
+          actionReason: prediction?.actionReason ?? null,
+          explanation: prediction?.explanation ?? null,
+          riskMessage: prediction?.riskMessage ?? null,
+        },
+
+        history: historySeries.map((point) => ({
+          date: point.t ?? "",
+          close: point.v ?? null,
+        })),
+
+        generatedAt: new Date().toLocaleString(),
+      };
+
+      if (type === "pdf") {
+        await exportDashboardPDF(exportPayload);
+        return;
+      }
+
+      await exportDashboardExcel(exportPayload);
+    } catch (exportError) {
+      console.error("Export failed:", exportError);
+      alert("Failed to export dashboard report");
+    }
+  };
 
   return (
     <div className="container">
@@ -206,80 +944,151 @@ export default function DashboardPage() {
           onSelectTicker={(t) => {
             const next = t.toUpperCase();
             setTicker(next);
+            localStorage.setItem("lastDashboardTicker", next);
             nav(`/dashboard?t=${encodeURIComponent(next)}`);
           }}
+          buttonLabel="Search"
         />
       </div>
 
-      {/* Stock loading / error (optional: keep loading, usually not annoying) */}
       {loading && (
         <div style={{ marginTop: 12, color: "var(--muted)" }}>Loading...</div>
       )}
+
       {err && <div style={{ marginTop: 12, color: "var(--red)" }}>{err}</div>}
 
-      <PriceOverviewCard {...overview} />
-
-      <div className="grid2" style={{ marginTop: 14 }}>
-        <HistoricalChartCard series={series} />
-
-        <div>
-          {/* Indicators error only (no loading flicker) */}
-          {indErr && (
-            <div style={{ marginBottom: 10, color: "var(--red)" }}>{indErr}</div>
-          )}
-
-          <TechnicalIndicatorsCard rsi={rsiValue} smaTrend={smaTrendValue} />
-        </div>
+      <div style={{ marginTop: 14 }}>
+        <PriceOverviewCard
+          ticker={stock?.ticker ?? ticker}
+          name={stock?.name ?? "Example Company"}
+          price={stock?.price ?? 182.45}
+          change={stock?.change ?? 2.13}
+          changePct={stock?.changePct ?? 1.18}
+          updatedAt={stock?.updatedAt ?? new Date().toISOString()}
+          marketStatus={stock?.marketStatus ?? "Closed"}
+          atCloseUpdatedAt={stock?.atCloseUpdatedAt ?? null}
+          extendedLabel={stock?.extendedLabel ?? null}
+          extendedPrice={stock?.extendedPrice ?? null}
+          extendedChange={stock?.extendedChange ?? null}
+          extendedChangePct={stock?.extendedChangePct ?? null}
+          extendedUpdatedAt={stock?.extendedUpdatedAt ?? null}
+        />
       </div>
 
-      <div className="grid2equal" style={{ marginTop: 14 }}>
-        <div>
-          {/* Sentiment error only (no loading flicker) */}
-          {sentErr && (
-            <div style={{ marginBottom: 10, color: "var(--red)" }}>{sentErr}</div>
+      <div className="dashboardGrid" style={{ marginTop: 18 }}>
+        <div className="span12">
+          {historyLoading && (
+            <div style={{ marginBottom: 10, color: "var(--muted)" }}>
+              Loading historical data...
+            </div>
           )}
 
-          <SentimentCard
-            label={sentiment?.label ?? "Neutral"}
-            score={sentiment?.score ?? 0}
-            confidence={sentiment?.confidence ?? 0}
-            items={(sentiment?.items ?? []).map((x) => {
-              const publishedAt =
-                typeof x.publishedAt === "number"
-                  ? new Date(x.publishedAt * 1000).toISOString()
-                  : x.publishedAt ?? null;
+          {historyErr && (
+            <div style={{ marginBottom: 10, color: "var(--red)" }}>
+              {historyErr}
+            </div>
+          )}
 
-              return {
-                title: x.title,
-                url: x.url,
-                imageUrl: x.imageUrl,
-                score: x.score,
-                publisher: x.publisher,
-                publishedAt,
-              };
-            })}
-            health={
-              sentiment?.health ?? {
-                provider: "none",
-                status: "error",
-                warning: "No data",
-              }
-            }
+          <HistoricalChartCard
+            series={historySeries}
+            selectedRange={selectedRange}
+            onRangeChange={setSelectedRange}
           />
         </div>
 
-        <PredictionCard horizon="7-day" trend="Up" confidence={78} />
+        <div className="spanLeftTop">
+          {indErr && (
+            <div style={{ marginBottom: 10, color: "var(--red)" }}>
+              {indErr}
+            </div>
+          )}
+
+          <TechnicalIndicatorsCard
+            rsi={latestRsi}
+            smaTrend={derivedSmaTrend}
+          />
+        </div>
+
+        <div className="spanRightTall">
+          {predictionErr && (
+            <div style={{ marginBottom: 10, color: "var(--red)" }}>
+              {predictionErr}
+            </div>
+          )}
+
+          <PredictionCard
+            horizon={prediction?.horizon ?? "7-day"}
+            trend={prediction?.trend ?? "Stable"}
+            confidence={prediction?.confidence ?? 0}
+            sentimentLabel={prediction?.sentimentLabel}
+            sentimentScore={prediction?.sentimentScore}
+            interpretation={prediction?.interpretation}
+            suggestedAction={prediction?.suggestedAction}
+            actionReason={prediction?.actionReason}
+            explanation={prediction?.explanation}
+            riskMessage={prediction?.riskMessage}
+            risk={riskProfile}
+            onChangeRisk={setRiskProfile}
+          />
+        </div>
+
+        <div className="spanLeftBottom" style={{ minHeight: "100%" }}>
+          {sentErr && (
+            <div style={{ marginBottom: 10, color: "var(--red)" }}>
+              {sentErr}
+            </div>
+          )}
+
+          <div style={{ height: "100%" }}>
+            <SentimentCard
+              label={sentiment?.label ?? "Neutral"}
+              score={sentiment?.score ?? 0}
+              confidence={sentiment?.confidence ?? 0}
+              items={(sentiment?.items ?? []).map((x) => {
+                const publishedAt =
+                  typeof x.publishedAt === "number"
+                    ? new Date(x.publishedAt * 1000).toISOString()
+                    : x.publishedAt ?? null;
+
+                return {
+                  title: x.title,
+                  url: x.url,
+                  imageUrl: x.imageUrl,
+                  score: x.score,
+                  publisher: x.publisher,
+                  publishedAt,
+                };
+              })}
+              health={
+                sentiment?.health ?? {
+                  provider: "none",
+                  status: "error",
+                  warning: "No data",
+                }
+              }
+            />
+          </div>
+        </div>
       </div>
 
-      <div style={{ marginTop: 14 }}>
-        <RiskRecommendationCard />
-      </div>
-
-      <div style={{ marginTop: 14 }}>
+      <div style={{ marginTop: 18 }}>
         <Card title="Actions">
           <div className="rowWrap">
-            <button className="btn">★ Add to Watchlist</button>
-            <button className="btn">⏰ Set Alert</button>
+            <button className="btn btnPrimary" onClick={handleAddWatchlist}>
+              ★ Add to Watchlist
+            </button>
+
+            {riskProfile === "Conservative" ? (
+              <button className="btn">⚠ Review Risk</button>
+            ) : (
+              <button
+                className="btn"
+                onClick={() => nav(`/alerts?t=${encodeURIComponent(ticker)}`)}
+              >
+                ⏰ Set Alert
+              </button>
+            )}
+
             <button
               className="btn btnPrimary"
               onClick={() => setExportOpen(true)}
@@ -298,10 +1107,7 @@ export default function DashboardPage() {
       <ExportModal
         open={exportOpen}
         onClose={() => setExportOpen(false)}
-        onExport={(type) => {
-          setExportOpen(false);
-          alert(`Export requested: ${type.toUpperCase()}`);
-        }}
+        onExport={handleExport}
       />
     </div>
   );

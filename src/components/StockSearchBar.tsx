@@ -3,9 +3,13 @@ import { searchStocks, type SearchResult } from "../services/api";
 
 type Props = {
   onSelectTicker: (ticker: string) => void;
+  buttonLabel?: string;
 };
 
-export default function StockSearchBar({ onSelectTicker }: Props) {
+export default function StockSearchBar({
+  onSelectTicker,
+  buttonLabel = "Search",
+}: Props) {
   const [q, setQ] = useState("");
   const [items, setItems] = useState<SearchResult[]>([]);
   const [open, setOpen] = useState(false);
@@ -17,6 +21,7 @@ export default function StockSearchBar({ onSelectTicker }: Props) {
         setItems([]);
         return;
       }
+
       try {
         const res = await searchStocks(query);
         setItems(res);
@@ -32,7 +37,16 @@ export default function StockSearchBar({ onSelectTicker }: Props) {
   const select = (ticker: string) => {
     onSelectTicker(ticker);
     setOpen(false);
+    setQ("");
+    setItems([]);
   };
+
+  const placeholder =
+    buttonLabel === "Add"
+      ? "Add stock to watchlist (e.g., TSLA)"
+      : buttonLabel === "Select"
+      ? "Search stock for alert (e.g., AAPL)"
+      : "Search ticker or company name (e.g., NVDA or NVIDIA)";
 
   return (
     <div style={{ position: "relative", width: "100%" }}>
@@ -44,10 +58,9 @@ export default function StockSearchBar({ onSelectTicker }: Props) {
             setQ(e.target.value);
             setOpen(true);
           }}
-          placeholder="Search ticker or company name (e.g., NVDA or NVIDIA)"
+          placeholder={placeholder}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
-              // If user hits enter, pick first suggestion if exists
               if (items.length > 0) select(items[0].ticker);
               else if (q.trim()) select(q.trim().toUpperCase());
             }
@@ -60,7 +73,7 @@ export default function StockSearchBar({ onSelectTicker }: Props) {
             else if (q.trim()) select(q.trim().toUpperCase());
           }}
         >
-          Search
+          {buttonLabel}
         </button>
       </div>
 
@@ -94,7 +107,9 @@ export default function StockSearchBar({ onSelectTicker }: Props) {
               }}
             >
               <div style={{ fontWeight: 800 }}>{it.ticker}</div>
-              <div style={{ color: "var(--muted)", fontSize: 12 }}>{it.name}</div>
+              <div style={{ color: "var(--muted)", fontSize: 12 }}>
+                {it.name}
+              </div>
             </button>
           ))}
         </div>

@@ -1,61 +1,48 @@
-import React, { useMemo, useState } from "react";
-import Card from "./Card";
+import React from "react";
 
-type Risk = "Conservative" | "Moderate" | "Aggressive";
+export type RiskProfile = "Conservative" | "Moderate" | "Aggressive";
 
-export default function RiskRecommendationCard() {
-  const [risk, setRisk] = useState<Risk>("Moderate");
+type Props = {
+  risk: RiskProfile;
+  onChangeRisk: (risk: RiskProfile) => void;
+};
 
-  const content = useMemo(() => {
-    switch (risk) {
-      case "Conservative":
-        return {
-          rec: "Consider smaller position sizes and focus on stability and long-term holding.",
-          tip: "Conservative investors prioritize lower volatility and steady growth over rapid gains.",
-        };
-      case "Aggressive":
-        return {
-          rec: "Higher risk approach: tolerate larger swings; consider strict stop-loss and position limits.",
-          tip: "Aggressive profiles accept higher volatility and require clear risk controls.",
-        };
-      default:
-        return {
-          rec: "Balanced approach: diversify and use indicators as guidance, not guarantees.",
-          tip: "Moderate profiles balance growth and stability with disciplined risk management.",
-        };
-    }
-  }, [risk]);
-
-  const btnFor = (r: Risk) => (
-    <button
-      className="btn"
-      style={{
-        borderColor: r === risk ? "rgba(74,144,226,0.6)" : "var(--border)",
-        background: r === risk ? "rgba(74,144,226,0.12)" : "rgba(255,255,255,0.02)",
-      }}
-      onClick={() => setRisk(r)}
-    >
-      {r}
-    </button>
-  );
-
+export default function RiskRecommendationCard({ risk, onChangeRisk }: Props) {
   return (
-    <Card title="Your Investment Profile">
-      <div className="rowWrap">
-        {btnFor("Conservative")}
-        {btnFor("Moderate")}
-        {btnFor("Aggressive")}
-      </div>
+    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <label
+        htmlFor="risk-profile"
+        style={{
+          fontSize: 12,
+          letterSpacing: 0.8,
+          textTransform: "uppercase",
+          color: "var(--muted2)",
+          fontWeight: 700,
+          whiteSpace: "nowrap",
+        }}
+      >
+        Risk Profile
+      </label>
 
-      <div style={{ marginTop: 12 }}>
-        <div style={{ fontWeight: 800 }}>Recommendation</div>
-        <div style={{ color: "var(--muted)", marginTop: 6 }}>{content.rec}</div>
-      </div>
-
-      <div style={{ marginTop: 12 }}>
-        <div style={{ fontWeight: 800 }}>Educational Tip</div>
-        <div style={{ color: "var(--muted)", marginTop: 6 }}>{content.tip}</div>
-      </div>
-    </Card>
+      <select
+        id="risk-profile"
+        className="input"
+        value={risk}
+        onChange={(e) => onChangeRisk(e.target.value as RiskProfile)}
+        style={{
+          width: 170,
+          padding: "8px 12px",
+          borderRadius: 10,
+          background: "rgba(255,255,255,0.03)",
+          color: "var(--text)",
+          border: "1px solid var(--border)",
+          fontWeight: 600,
+        }}
+      >
+        <option value="Conservative">Conservative</option>
+        <option value="Moderate">Moderate</option>
+        <option value="Aggressive">Aggressive</option>
+      </select>
+    </div>
   );
 }

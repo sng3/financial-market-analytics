@@ -19,19 +19,23 @@ export default function LandingPage() {
 
       <div style={{ marginTop: 18 }}>
         <StockSearchBar
-          onSearch={(q) => {
-            if (!q) return;
-            nav(`/dashboard?t=${encodeURIComponent(q)}`);
+          onSelectTicker={(ticker: string) => {
+            if (!ticker) return;
+            nav(`/dashboard?t=${encodeURIComponent(ticker)}`);
           }}
         />
       </div>
 
       <div className="grid2equal" style={{ marginTop: 16 }}>
         <Card title="Real-time Market Data">
-          <div style={{ color: "var(--muted)" }}>Fast price updates and historical charts in one place.</div>
+          <div style={{ color: "var(--muted)" }}>
+            Fast price updates and historical charts in one place.
+          </div>
         </Card>
         <Card title="Learn as You Explore">
-          <div style={{ color: "var(--muted)" }}>Risk profiles and short explanations help beginners build confidence.</div>
+          <div style={{ color: "var(--muted)" }}>
+            Risk profiles and short explanations help beginners build confidence.
+          </div>
         </Card>
       </div>
 
