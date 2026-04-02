@@ -7,9 +7,10 @@ from app.services.notification_service import (
     send_email_notification,
     send_sms_notification,
     send_push_notification,
-    build_alert_email,
 )
 from app.services.sentiment_service import get_sentiment
+
+MAX_ARTICLES_PER_TICKER_EMAIL = 3
 
 
 def _get_user_news_tickers(user_id: int) -> List[str]:
@@ -44,17 +45,62 @@ def _already_sent_article(user_id: int, article_url: str) -> bool:
     return row is not None
 
 
-def _mark_article_sent(user_id: int, ticker: str, article_url: str) -> None:
+def _mark_articles_sent(user_id: int, ticker: str, article_urls: List[str]) -> None:
     db = get_db()
 
-    db.execute(
-        """
-        INSERT OR IGNORE INTO news_alerts_sent (user_id, ticker, article_url)
-        VALUES (?, ?, ?);
-        """,
-        (user_id, ticker, article_url),
-    )
+    for article_url in article_urls:
+        db.execute(
+            """
+            INSERT OR IGNORE INTO news_alerts_sent (user_id, ticker, article_url)
+            VALUES (?, ?, ?);
+            """,
+            (user_id, ticker, article_url),
+        )
+
     db.commit()
+
+
+def _build_news_digest_email(ticker: str, articles: List[Dict[str, Any]]) -> tuple[str, str]:
+    subject = f"News Alert: {ticker}"
+
+    lines: List[str] = [
+        "Financial Market Analytics Alert",
+        "",
+        "Alert Type: News Alert",
+        f"Ticker: {ticker}",
+        f"New Articles Found: {len(articles)}",
+        "",
+    ]
+
+    for index, article in enumerate(articles, start=1):
+        headline = str(article.get("title") or "").strip()
+        publisher = str(article.get("publisher") or "").strip()
+        published_at = article.get("publishedAt")
+        score = article.get("score")
+        article_url = str(article.get("url") or "").strip()
+
+        lines.append(f"{index}. {headline or 'Untitled Article'}")
+
+        if publisher:
+            lines.append(f"Publisher: {publisher}")
+
+        if published_at:
+            lines.append(f"Published At: {published_at}")
+
+        if score is not None:
+            lines.append(f"Sentiment Score: {score}")
+
+        if article_url:
+            lines.append(f"Article URL: {article_url}")
+
+        lines.append("")
+
+    lines.append(
+        "This notification was sent because new relevant news items were found for a stock in your watchlist."
+    )
+
+    body = "\n".join(lines)
+    return subject, body
 
 
 def check_user_news_alerts(user_id: int) -> Dict[str, Any]:
@@ -149,50 +195,43 @@ def check_user_news_alerts(user_id: int) -> Dict[str, Any]:
             )
             continue
 
-        latest_item = items[0]
+        unsent_articles: List[Dict[str, Any]] = []
 
-        headline = str(latest_item.get("title") or "").strip()
-        publisher = str(latest_item.get("publisher") or "").strip()
-        published_at = latest_item.get("publishedAt")
-        article_url = str(latest_item.get("url") or "").strip()
-        score = latest_item.get("score")
+        for item in items:
+            article_url = str(item.get("url") or "").strip()
 
-        if not article_url:
-            print(
-                "NEWS ALERT SKIPPED | "
-                f"user_id={user_id} | "
-                f"ticker={ticker} | "
-                f"reason=Missing article URL"
-            )
-            continue
+            if not article_url:
+                continue
 
-        if _already_sent_article(user_id, article_url):
+            if _already_sent_article(user_id, article_url):
+                continue
+
+            unsent_articles.append(item)
+
+            if len(unsent_articles) >= MAX_ARTICLES_PER_TICKER_EMAIL:
+                break
+
+        if not unsent_articles:
             print(
                 "NEWS ALERT ALREADY SENT | "
                 f"user_id={user_id} | "
                 f"ticker={ticker} | "
-                f"url={article_url}"
+                f"reason=no new unsent articles"
             )
             continue
 
+        headlines = [str(article.get("title") or "").strip() for article in unsent_articles]
         print(
             "NEWS ALERT TRIGGERED | "
             f"user_id={user_id} | "
             f"ticker={ticker} | "
-            f"headline={headline}"
+            f"new_articles={len(unsent_articles)} | "
+            f"headlines={headlines}"
         )
 
-        subject, body = build_alert_email(
-            alert_type="News Alert",
+        subject, body = _build_news_digest_email(
             ticker=ticker,
-            details={
-                "headline": headline,
-                "publisher": publisher,
-                "published_at": published_at,
-                "sentiment_score": score,
-                "article_url": article_url,
-            },
-            footer_message="This notification was sent because a new relevant news item was found for a stock in your watchlist.",
+            articles=unsent_articles,
         )
 
         deliveries = []
@@ -241,14 +280,19 @@ def check_user_news_alerts(user_id: int) -> Dict[str, Any]:
                 f"reason=push notifications disabled"
             )
 
-        _mark_article_sent(user_id, ticker, article_url)
+        article_urls = [
+            str(article.get("url") or "").strip()
+            for article in unsent_articles
+            if str(article.get("url") or "").strip()
+        ]
+        _mark_articles_sent(user_id, ticker, article_urls)
 
         triggered += 1
 
         news_summary = {
             "ticker": ticker,
-            "headline": headline,
-            "articleUrl": article_url,
+            "articleCount": len(unsent_articles),
+            "articleUrls": article_urls,
             "deliveries": deliveries,
         }
 

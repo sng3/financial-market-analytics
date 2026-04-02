@@ -9,6 +9,8 @@ from .routes.auth import bp as auth_bp
 from app.services.alert_check_service import check_all_users_price_alerts
 from app.services.news_alert_service import check_all_users_news_alerts
 
+import os
+
 # keep scheduler global so it doesn’t start multiple times
 _scheduler = None
 
@@ -44,7 +46,7 @@ def create_app():
     # START ALERT SCHEDULER
     # =========================
     global _scheduler
-    if _scheduler is None:
+    if _scheduler is None and os.environ.get("WERKZEUG_RUN_MAIN") == "true":
         _scheduler = BackgroundScheduler(daemon=True)
 
         def run_alert_checks():
