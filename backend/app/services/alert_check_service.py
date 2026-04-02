@@ -8,6 +8,7 @@ from app.services.notification_service import (
     send_email_notification,
     send_sms_notification,
     send_push_notification,
+    build_alert_email,
 )
 
 
@@ -138,12 +139,16 @@ def check_user_price_alerts(user_id: int) -> Dict[str, Any]:
             f"target_price={target_price}"
         )
 
-        subject = f"Price Alert Triggered: {alert['ticker']}"
-        body = (
-            f"Your price alert has been triggered.\n\n"
-            f"Ticker: {alert['ticker']}\n"
-            f"Condition: {alert['condition']} {target_price}\n"
-            f"Current Price: {current_price}\n"
+        subject, body = build_alert_email(
+            alert_type="Price Alert Triggered",
+            ticker=alert["ticker"],
+            details={
+                "condition": alert["condition"],
+                "target_price": target_price,
+                "current_price": current_price,
+                "status": "Triggered",
+            },
+            footer_message="This notification was sent because your selected price alert condition was met.",
         )
 
         deliveries = []

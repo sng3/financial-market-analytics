@@ -1,7 +1,7 @@
 import os
 import smtplib
 from email.message import EmailMessage
-from typing import Dict, Any
+from typing import Dict, Any, Tuple
 
 
 def send_email_notification(to_email: str, subject: str, body: str) -> Dict[str, Any]:
@@ -16,7 +16,7 @@ def send_email_notification(to_email: str, subject: str, body: str) -> Dict[str,
         return {
             "ok": False,
             "channel": "email",
-            "message": "SMTP is not configured."
+            "message": "SMTP is not configured.",
         }
 
     try:
@@ -36,15 +36,52 @@ def send_email_notification(to_email: str, subject: str, body: str) -> Dict[str,
         return {
             "ok": True,
             "channel": "email",
-            "message": "Email sent."
+            "message": "Email sent.",
         }
     except Exception as e:
         print(f"EMAIL FAILED | to={to_email} | error={e}")
         return {
             "ok": False,
             "channel": "email",
-            "message": str(e)
+            "message": str(e),
         }
+
+
+def build_alert_email(
+    alert_type: str,
+    ticker: str,
+    details: Dict[str, Any],
+    footer_message: str | None = None,
+) -> Tuple[str, str]:
+    clean_alert_type = (alert_type or "Alert").strip()
+    clean_ticker = (ticker or "").strip().upper()
+
+    subject = f"{clean_alert_type}: {clean_ticker}" if clean_ticker else clean_alert_type
+
+    lines = [
+        "Financial Market Analytics Alert",
+        "",
+        f"Alert Type: {clean_alert_type}",
+    ]
+
+    if clean_ticker:
+        lines.append(f"Ticker: {clean_ticker}")
+
+    for key, value in details.items():
+        if value is None or value == "":
+            continue
+
+        label = str(key).replace("_", " ").strip().title()
+        lines.append(f"{label}: {value}")
+
+    lines.append("")
+    lines.append(
+        footer_message
+        or "This notification was sent because an alert condition matched your selected preferences."
+    )
+
+    body = "\n".join(lines)
+    return subject, body
 
 
 def send_sms_notification(phone: str, body: str) -> Dict[str, Any]:
@@ -52,7 +89,7 @@ def send_sms_notification(phone: str, body: str) -> Dict[str, Any]:
     return {
         "ok": False,
         "channel": "sms",
-        "message": "SMS provider is not configured yet."
+        "message": "SMS provider is not configured yet.",
     }
 
 
@@ -61,5 +98,5 @@ def send_push_notification(user_id: int, title: str, body: str) -> Dict[str, Any
     return {
         "ok": False,
         "channel": "push",
-        "message": "Push provider is not configured yet."
+        "message": "Push provider is not configured yet.",
     }
