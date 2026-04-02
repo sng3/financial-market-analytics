@@ -76,31 +76,22 @@ export const timeZoneOptions: TimeZoneOption[] = [
   { value: "America/Chicago", label: "GMT-5  Chicago (US Central)" },
   { value: "America/Denver", label: "GMT-6  Denver (US Mountain)" },
   { value: "America/Los_Angeles", label: "GMT-7  Los Angeles (US Pacific)" },
-
   { value: "America/Sao_Paulo", label: "GMT-3  São Paulo (Brazil)" },
-
   { value: "Europe/London", label: "GMT+0  London (UK)" },
   { value: "Europe/Paris", label: "GMT+1  Paris (Europe Central)" },
   { value: "Europe/Zurich", label: "GMT+1  Zurich (Switzerland)" },
   { value: "Europe/Frankfurt", label: "GMT+1  Frankfurt (Germany)" },
-
   { value: "Europe/Athens", label: "GMT+2  Athens (Eastern Europe)" },
   { value: "Africa/Johannesburg", label: "GMT+2  Johannesburg (South Africa)" },
-
   { value: "Asia/Dubai", label: "GMT+4  Dubai (UAE)" },
-
   { value: "Asia/Kolkata", label: "GMT+5:30  Mumbai (India)" },
-
   { value: "Asia/Singapore", label: "GMT+8  Singapore" },
   { value: "Asia/Hong_Kong", label: "GMT+8  Hong Kong" },
   { value: "Asia/Shanghai", label: "GMT+8  Shanghai (China)" },
   { value: "Asia/Kuala_Lumpur", label: "GMT+8  Kuala Lumpur (Malaysia)" },
-
   { value: "Asia/Tokyo", label: "GMT+9  Tokyo (Japan)" },
   { value: "Asia/Seoul", label: "GMT+9  Seoul (South Korea)" },
-
   { value: "Australia/Sydney", label: "GMT+10  Sydney (Australia)" },
-
   { value: "Pacific/Auckland", label: "GMT+12  Auckland (New Zealand)" },
 ];
 
@@ -123,10 +114,15 @@ export default function OnboardingPage() {
   const [timeZone, setTimeZone] = useState("America/New_York");
   const [countryQuery, setCountryQuery] = useState("United States");
   const [timeZoneQuery, setTimeZoneQuery] = useState("GMT-4  New York (US Eastern)");
+
   const [emailAlerts, setEmailAlerts] = useState(true);
   const [priceAlerts, setPriceAlerts] = useState(true);
   const [newsAlerts, setNewsAlerts] = useState(true);
   const [earningsAlerts, setEarningsAlerts] = useState(false);
+  const [smsNotifications, setSmsNotifications] = useState(false);
+  const [pushNotifications, setPushNotifications] = useState(false);
+
+  const [notificationError, setNotificationError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const filteredCountries = useMemo(() => {
@@ -146,6 +142,10 @@ export default function OnboardingPage() {
     );
   }, [timeZoneQuery]);
 
+  const hasSelectedAlertType = priceAlerts || newsAlerts || earningsAlerts;
+  const hasSelectedDeliveryMethod =
+    emailAlerts || smsNotifications || pushNotifications;
+
   const toggleSector = (sector: string) => {
     setFavoriteSectors((prev: string[]) =>
       prev.includes(sector)
@@ -157,6 +157,22 @@ export default function OnboardingPage() {
   const handleFinish = async () => {
     if (!existingUser) {
       nav("/login");
+      return;
+    }
+
+    setNotificationError("");
+
+    if (hasSelectedAlertType && !hasSelectedDeliveryMethod) {
+      setNotificationError(
+        "Please select at least one delivery method when any alert type is enabled."
+      );
+      return;
+    }
+
+    if (hasSelectedDeliveryMethod && !hasSelectedAlertType) {
+      setNotificationError(
+        "Please select at least one alert type when any delivery method is enabled."
+      );
       return;
     }
 
@@ -175,6 +191,8 @@ export default function OnboardingPage() {
           priceAlerts,
           newsAlerts,
           earningsAlerts,
+          smsNotifications,
+          pushNotifications,
         },
         country,
         timeZone,
@@ -359,43 +377,126 @@ export default function OnboardingPage() {
               <div style={{ color: "var(--muted2)", fontSize: 13, marginBottom: 8 }}>
                 Notification Preferences
               </div>
-              <div style={{ display: "grid", gap: 10 }}>
-                <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <input
-                    type="checkbox"
-                    checked={emailAlerts}
-                    onChange={(e) => setEmailAlerts(e.target.checked)}
-                  />
-                  Email alerts
-                </label>
 
-                <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <input
-                    type="checkbox"
-                    checked={priceAlerts}
-                    onChange={(e) => setPriceAlerts(e.target.checked)}
-                  />
-                  Price alerts
-                </label>
+              <div style={{ display: "grid", gap: 16 }}>
+                <div>
+                  <div
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 700,
+                      color: "rgba(255,255,255,0.9)",
+                      marginBottom: 8,
+                    }}
+                  >
+                    Alert Types
+                  </div>
 
-                <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <input
-                    type="checkbox"
-                    checked={newsAlerts}
-                    onChange={(e) => setNewsAlerts(e.target.checked)}
-                  />
-                  News alerts
-                </label>
+                  <div style={{ display: "grid", gap: 10 }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <input
+                        type="checkbox"
+                        checked={priceAlerts}
+                        onChange={(e) => {
+                          setNotificationError("");
+                          setPriceAlerts(e.target.checked);
+                        }}
+                      />
+                      Price alerts
+                    </label>
 
-                <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <input
-                    type="checkbox"
-                    checked={earningsAlerts}
-                    onChange={(e) => setEarningsAlerts(e.target.checked)}
-                  />
-                  Earnings alerts
-                </label>
+                    <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <input
+                        type="checkbox"
+                        checked={newsAlerts}
+                        onChange={(e) => {
+                          setNotificationError("");
+                          setNewsAlerts(e.target.checked);
+                        }}
+                      />
+                      News alerts
+                    </label>
+
+                    <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <input
+                        type="checkbox"
+                        checked={earningsAlerts}
+                        onChange={(e) => {
+                          setNotificationError("");
+                          setEarningsAlerts(e.target.checked);
+                        }}
+                      />
+                      Earnings alerts
+                    </label>
+                  </div>
+                </div>
+
+                <div>
+                  <div
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 700,
+                      color: "rgba(255,255,255,0.9)",
+                      marginBottom: 8,
+                    }}
+                  >
+                    Delivery
+                  </div>
+
+                  <div style={{ display: "grid", gap: 10 }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <input
+                        type="checkbox"
+                        checked={emailAlerts}
+                        onChange={(e) => {
+                          setNotificationError("");
+                          setEmailAlerts(e.target.checked);
+                        }}
+                      />
+                      Email notifications
+                    </label>
+
+                    <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <input
+                        type="checkbox"
+                        checked={smsNotifications}
+                        onChange={(e) => {
+                          setNotificationError("");
+                          setSmsNotifications(e.target.checked);
+                        }}
+                      />
+                      SMS notifications
+                    </label>
+
+                    <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <input
+                        type="checkbox"
+                        checked={pushNotifications}
+                        onChange={(e) => {
+                          setNotificationError("");
+                          setPushNotifications(e.target.checked);
+                        }}
+                      />
+                      Push notifications
+                    </label>
+                  </div>
+                </div>
               </div>
+
+              {notificationError && (
+                <div
+                  style={{
+                    marginTop: 12,
+                    color: "#ff9b9b",
+                    background: "rgba(231,76,60,0.10)",
+                    border: "1px solid rgba(231,76,60,0.35)",
+                    borderRadius: 12,
+                    padding: "10px 12px",
+                    fontSize: 14,
+                  }}
+                >
+                  {notificationError}
+                </div>
+              )}
             </div>
 
             <button

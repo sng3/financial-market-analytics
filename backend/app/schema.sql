@@ -14,6 +14,8 @@ CREATE TABLE IF NOT EXISTS users (
   price_alerts INTEGER DEFAULT 1,
   news_alerts INTEGER DEFAULT 1,
   earnings_alerts INTEGER DEFAULT 0,
+  sms_notifications INTEGER DEFAULT 0,
+  push_notifications INTEGER DEFAULT 0,
   country TEXT DEFAULT 'United States',
   time_zone TEXT DEFAULT 'America/New_York',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

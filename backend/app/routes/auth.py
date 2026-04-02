@@ -1,8 +1,17 @@
+import json
 from flask import Blueprint, request, jsonify
 from app.db import get_db
 
 bp = Blueprint("auth", __name__, url_prefix="/api")
 
+def _parse_favorite_sectors(raw_value):
+    if not raw_value:
+        return []
+    try:
+        parsed = json.loads(raw_value)
+        return parsed if isinstance(parsed, list) else []
+    except Exception:
+        return []
 
 def _row_to_user_profile(row):
     return {
@@ -15,17 +24,18 @@ def _row_to_user_profile(row):
         "experience": row["experience"] or "Beginner",
         "goal": row["goal"] or "Learning",
         "horizon": row["horizon"] or "1 - 5 Years",
-        "favoriteSectors": [],
+        "favoriteSectors": _parse_favorite_sectors(row["favorite_sectors"]),
         "notifications": {
             "emailAlerts": bool(row["email_alerts"]),
             "priceAlerts": bool(row["price_alerts"]),
             "newsAlerts": bool(row["news_alerts"]),
             "earningsAlerts": bool(row["earnings_alerts"]),
+            "smsNotifications": bool(row["sms_notifications"]),
+            "pushNotifications": bool(row["push_notifications"]),
         },
         "country": row["country"] or "United States",
         "timeZone": row["time_zone"] or "America/New_York",
     }
-
 
 @bp.post("/signup")
 def signup():
@@ -88,7 +98,6 @@ def signup():
         "user": _row_to_user_profile(row)
     }), 201
 
-
 @bp.post("/login")
 def login():
     data = request.get_json(silent=True) or {}
@@ -132,7 +141,6 @@ def login():
         "user": _row_to_user_profile(row)
     }), 200
 
-
 @bp.get("/profile/<int:user_id>")
 def get_profile(user_id: int):
     db = get_db()
@@ -149,7 +157,6 @@ def get_profile(user_id: int):
         "user": _row_to_user_profile(row)
     }), 200
 
-
 @bp.put("/profile/<int:user_id>")
 def update_profile(user_id: int):
     data = request.get_json(silent=True) or {}
@@ -164,7 +171,27 @@ def update_profile(user_id: int):
         return jsonify({"error": "User not found"}), 404
 
     favorite_sectors = data.get("favoriteSectors") or []
+    if not isinstance(favorite_sectors, list):
+        favorite_sectors = []
+
     notifications = data.get("notifications") or {}
+
+    alert_types = [
+        bool(notifications.get("priceAlerts", True)),
+        bool(notifications.get("newsAlerts", True)),
+        bool(notifications.get("earningsAlerts", False)),
+    ]
+
+    delivery_methods = [
+        bool(notifications.get("emailAlerts", True)),
+        bool(notifications.get("smsNotifications", False)),
+        bool(notifications.get("pushNotifications", False)),
+    ]
+
+    if any(alert_types) and not any(delivery_methods):
+        return jsonify({
+            "error": "At least one delivery method must be enabled when alert types are selected."
+        }), 400
 
     db.execute("""
         UPDATE users
@@ -177,12 +204,15 @@ def update_profile(user_id: int):
             experience = ?,
             goal = ?,
             horizon = ?,
+            favorite_sectors = ?,
             country = ?,
             time_zone = ?,
             email_alerts = ?,
             price_alerts = ?,
             news_alerts = ?,
-            earnings_alerts = ?
+            earnings_alerts = ?,
+            sms_notifications = ?,
+            push_notifications = ?
         WHERE id = ?;
     """, (
         (data.get("firstName") or "").strip(),
@@ -193,12 +223,15 @@ def update_profile(user_id: int):
         data.get("experience") or "Beginner",
         data.get("goal") or "Learning",
         data.get("horizon") or "1 - 5 Years",
+        json.dumps(favorite_sectors),
         data.get("country") or "United States",
         data.get("timeZone") or "America/New_York",
         1 if notifications.get("emailAlerts", True) else 0,
         1 if notifications.get("priceAlerts", True) else 0,
         1 if notifications.get("newsAlerts", True) else 0,
         1 if notifications.get("earningsAlerts", False) else 0,
+        1 if notifications.get("smsNotifications", False) else 0,
+        1 if notifications.get("pushNotifications", False) else 0,
         user_id
     ))
 
@@ -213,7 +246,6 @@ def update_profile(user_id: int):
         "ok": True,
         "user": _row_to_user_profile(row)
     }), 200
-
 
 @bp.delete("/profile/<int:user_id>")
 def delete_profile(user_id: int):

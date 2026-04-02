@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Card from "../components/Card";
+import InfoDialog from "../components/InfoDialog";
 import { useNavigate } from "react-router-dom";
 import type { UserProfile } from "../types/user";
 import { fetchProfile, updateProfile, deleteProfile } from "../services/api";
@@ -20,6 +21,8 @@ const defaultUser: UserProfile = {
     priceAlerts: true,
     newsAlerts: true,
     earningsAlerts: false,
+    smsNotifications: false,
+    pushNotifications: false,
   },
   country: "United States",
   timeZone: "America/New_York",
@@ -97,31 +100,22 @@ export const timeZoneOptions: TimeZoneOption[] = [
   { value: "America/Chicago", label: "GMT-5  Chicago (US Central)" },
   { value: "America/Denver", label: "GMT-6  Denver (US Mountain)" },
   { value: "America/Los_Angeles", label: "GMT-7  Los Angeles (US Pacific)" },
-
   { value: "America/Sao_Paulo", label: "GMT-3  São Paulo (Brazil)" },
-
   { value: "Europe/London", label: "GMT+0  London (UK)" },
   { value: "Europe/Paris", label: "GMT+1  Paris (Europe Central)" },
   { value: "Europe/Zurich", label: "GMT+1  Zurich (Switzerland)" },
   { value: "Europe/Frankfurt", label: "GMT+1  Frankfurt (Germany)" },
-
   { value: "Europe/Athens", label: "GMT+2  Athens (Eastern Europe)" },
   { value: "Africa/Johannesburg", label: "GMT+2  Johannesburg (South Africa)" },
-
   { value: "Asia/Dubai", label: "GMT+4  Dubai (UAE)" },
-
   { value: "Asia/Kolkata", label: "GMT+5:30  Mumbai (India)" },
-
   { value: "Asia/Singapore", label: "GMT+8  Singapore" },
   { value: "Asia/Hong_Kong", label: "GMT+8  Hong Kong" },
   { value: "Asia/Shanghai", label: "GMT+8  Shanghai (China)" },
   { value: "Asia/Kuala_Lumpur", label: "GMT+8  Kuala Lumpur (Malaysia)" },
-
   { value: "Asia/Tokyo", label: "GMT+9  Tokyo (Japan)" },
   { value: "Asia/Seoul", label: "GMT+9  Seoul (South Korea)" },
-
   { value: "Australia/Sydney", label: "GMT+10  Sydney (Australia)" },
-
   { value: "Pacific/Auckland", label: "GMT+12  Auckland (New Zealand)" },
 ];
 
@@ -134,15 +128,19 @@ function getTimeZoneLabel(value: string): string {
 
 export default function ProfilePage() {
   const nav = useNavigate();
+
   const [user, setUser] = useState<UserProfile>(defaultUser);
   const [saved, setSaved] = useState("");
+  const [notificationError, setNotificationError] = useState("");
   const [countryQuery, setCountryQuery] = useState(defaultUser.country);
   const [timeZoneQuery, setTimeZoneQuery] = useState(
     getTimeZoneLabel(defaultUser.timeZone)
   );
+  const [showNotifInfo, setShowNotifInfo] = useState(false);
 
   useEffect(() => {
     const raw = localStorage.getItem("user");
+
     if (!raw) {
       nav("/login");
       return;
@@ -167,7 +165,9 @@ export default function ProfilePage() {
 
   const filteredCountries = useMemo(() => {
     const q = countryQuery.trim().toLowerCase();
+
     if (!q) return countryOptions;
+
     return countryOptions.filter((option: string) =>
       option.toLowerCase().includes(q)
     );
@@ -175,13 +175,25 @@ export default function ProfilePage() {
 
   const filteredTimeZones = useMemo(() => {
     const q = timeZoneQuery.trim().toLowerCase();
+
     if (!q) return timeZoneOptions;
+
     return timeZoneOptions.filter(
       (option: TimeZoneOption) =>
         option.label.toLowerCase().includes(q) ||
         option.value.toLowerCase().includes(q)
     );
   }, [timeZoneQuery]);
+
+  const hasSelectedAlertType =
+    user.notifications.priceAlerts ||
+    user.notifications.newsAlerts ||
+    user.notifications.earningsAlerts;
+
+  const hasSelectedDeliveryMethod =
+    user.notifications.emailAlerts ||
+    user.notifications.smsNotifications ||
+    user.notifications.pushNotifications;
 
   const toggleSector = (sector: string) => {
     setUser((prev: UserProfile) => ({
@@ -193,6 +205,23 @@ export default function ProfilePage() {
   };
 
   const handleSave = async () => {
+    setSaved("");
+    setNotificationError("");
+
+    if (hasSelectedAlertType && !hasSelectedDeliveryMethod) {
+      setNotificationError(
+        "Please select at least one delivery method when any alert type is enabled."
+      );
+      return;
+    }
+
+    if (hasSelectedDeliveryMethod && !hasSelectedAlertType) {
+      setNotificationError(
+        "Please select at least one alert type when any delivery method is enabled."
+      );
+      return;
+    }
+
     try {
       const updated = await updateProfile(user.id, user);
       setUser(updated);
@@ -413,76 +442,206 @@ export default function ProfilePage() {
       </div>
 
       <div style={{ marginTop: 14 }}>
-        <Card title="Notifications">
-          <div style={{ display: "grid", gap: 10 }}>
-            <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <input
-                type="checkbox"
-                checked={user.notifications.emailAlerts}
-                onChange={(e) =>
-                  setUser({
-                    ...user,
-                    notifications: {
-                      ...user.notifications,
-                      emailAlerts: e.target.checked,
-                    },
-                  })
-                }
-              />
-              Email alerts
-            </label>
+        <Card title="">
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              marginBottom: 12,
+            }}
+          >
+            <div
+              style={{
+                fontWeight: 900,
+                fontSize: 16,
+                color: "rgba(255,255,255,0.92)",
+              }}
+            >
+              Notifications
+            </div>
 
-            <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <input
-                type="checkbox"
-                checked={user.notifications.priceAlerts}
-                onChange={(e) =>
-                  setUser({
-                    ...user,
-                    notifications: {
-                      ...user.notifications,
-                      priceAlerts: e.target.checked,
-                    },
-                  })
-                }
-              />
-              Price alerts
-            </label>
-
-            <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <input
-                type="checkbox"
-                checked={user.notifications.newsAlerts}
-                onChange={(e) =>
-                  setUser({
-                    ...user,
-                    notifications: {
-                      ...user.notifications,
-                      newsAlerts: e.target.checked,
-                    },
-                  })
-                }
-              />
-              News alerts
-            </label>
-
-            <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <input
-                type="checkbox"
-                checked={user.notifications.earningsAlerts}
-                onChange={(e) =>
-                  setUser({
-                    ...user,
-                    notifications: {
-                      ...user.notifications,
-                      earningsAlerts: e.target.checked,
-                    },
-                  })
-                }
-              />
-              Earnings alerts
-            </label>
+            <button
+              type="button"
+              onClick={() => setShowNotifInfo(true)}
+              aria-label="More information about notifications"
+              title="More information"
+              style={{
+                width: 22,
+                height: 22,
+                borderRadius: "50%",
+                border: "1px solid rgba(255,255,255,0.16)",
+                background: "rgba(255,255,255,0.06)",
+                color: "rgba(255,255,255,0.88)",
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 12,
+                fontWeight: 800,
+                lineHeight: 1,
+                padding: 0,
+              }}
+            >
+              i
+            </button>
           </div>
+
+          <div style={{ display: "grid", gap: 16 }}>
+            <div>
+              <div
+                style={{
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: "rgba(255,255,255,0.9)",
+                  marginBottom: 8,
+                }}
+              >
+                Alert Types
+              </div>
+
+              <div style={{ display: "grid", gap: 10 }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <input
+                    type="checkbox"
+                    checked={user.notifications.priceAlerts}
+                    onChange={(e) => {
+                      setNotificationError("");
+                      setUser({
+                        ...user,
+                        notifications: {
+                          ...user.notifications,
+                          priceAlerts: e.target.checked,
+                        },
+                      });
+                    }}
+                  />
+                  Price alerts
+                </label>
+
+                <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <input
+                    type="checkbox"
+                    checked={user.notifications.newsAlerts}
+                    onChange={(e) => {
+                      setNotificationError("");
+                      setUser({
+                        ...user,
+                        notifications: {
+                          ...user.notifications,
+                          newsAlerts: e.target.checked,
+                        },
+                      });
+                    }}
+                  />
+                  News alerts
+                </label>
+
+                <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <input
+                    type="checkbox"
+                    checked={user.notifications.earningsAlerts}
+                    onChange={(e) => {
+                      setNotificationError("");
+                      setUser({
+                        ...user,
+                        notifications: {
+                          ...user.notifications,
+                          earningsAlerts: e.target.checked,
+                        },
+                      });
+                    }}
+                  />
+                  Earnings alerts
+                </label>
+              </div>
+            </div>
+
+            <div>
+              <div
+                style={{
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: "rgba(255,255,255,0.9)",
+                  marginBottom: 8,
+                }}
+              >
+                Delivery
+              </div>
+
+              <div style={{ display: "grid", gap: 10 }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <input
+                    type="checkbox"
+                    checked={user.notifications.emailAlerts}
+                    onChange={(e) => {
+                      setNotificationError("");
+                      setUser({
+                        ...user,
+                        notifications: {
+                          ...user.notifications,
+                          emailAlerts: e.target.checked,
+                        },
+                      });
+                    }}
+                  />
+                  Email notifications
+                </label>
+
+                <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <input
+                    type="checkbox"
+                    checked={user.notifications.smsNotifications}
+                    onChange={(e) => {
+                      setNotificationError("");
+                      setUser({
+                        ...user,
+                        notifications: {
+                          ...user.notifications,
+                          smsNotifications: e.target.checked,
+                        },
+                      });
+                    }}
+                  />
+                  SMS notifications
+                </label>
+
+                <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <input
+                    type="checkbox"
+                    checked={user.notifications.pushNotifications}
+                    onChange={(e) => {
+                      setNotificationError("");
+                      setUser({
+                        ...user,
+                        notifications: {
+                          ...user.notifications,
+                          pushNotifications: e.target.checked,
+                        },
+                      });
+                    }}
+                  />
+                  Push notifications
+                </label>
+              </div>
+            </div>
+          </div>
+
+          {notificationError && (
+            <div
+              style={{
+                marginTop: 12,
+                color: "#ff9b9b",
+                background: "rgba(231,76,60,0.10)",
+                border: "1px solid rgba(231,76,60,0.35)",
+                borderRadius: 12,
+                padding: "10px 12px",
+                fontSize: 14,
+              }}
+            >
+              {notificationError}
+            </div>
+          )}
         </Card>
       </div>
 
@@ -509,6 +668,34 @@ export default function ProfilePage() {
           )}
         </Card>
       </div>
+
+      <InfoDialog
+        open={showNotifInfo}
+        title="Notifications Info"
+        onClose={() => setShowNotifInfo(false)}
+      >
+        <div style={{ display: "grid", gap: 12 }}>
+          <div>
+            <strong style={{ color: "rgba(255,255,255,0.92)" }}>
+              Alert Types
+            </strong>
+            <div style={{ marginTop: 4 }}>
+              Select one or more alert categories to receive notifications for
+              price movements, market news, and earnings announcements.
+            </div>
+          </div>
+
+          <div>
+            <strong style={{ color: "rgba(255,255,255,0.92)" }}>
+              Delivery
+            </strong>
+            <div style={{ marginTop: 4 }}>
+              Select one or more delivery methods to receive notifications. If any alert type is enabled, at least one delivery method must also be enabled. 
+              Likewise, if any delivery method is enabled, at least one alert type must also be selected.
+            </div>
+          </div>
+        </div>
+      </InfoDialog>
     </div>
   );
 }

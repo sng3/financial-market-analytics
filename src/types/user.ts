@@ -14,6 +14,8 @@ export type UserProfile = {
     priceAlerts: boolean;
     newsAlerts: boolean;
     earningsAlerts: boolean;
+    smsNotifications: boolean;
+    pushNotifications: boolean;
   };
   country: string;
   timeZone: string;

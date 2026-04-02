@@ -293,15 +293,9 @@
 //   const handleExport = async (type: "pdf" | "excel") => {
 //     try {
 //       setExportOpen(false);
-
 //       await new Promise((resolve) => setTimeout(resolve, 300));
 
-//       if (type === "pdf") {
-//         await exportDashboardPDF();
-//         return;
-//       }
-
-//       await exportDashboardExcel({
+//       const exportPayload = {
 //         ticker,
 //         companyName: stock?.name ?? "",
 
@@ -371,7 +365,14 @@
 //         })),
 
 //         generatedAt: new Date().toLocaleString(),
-//       });
+//       };
+
+//       if (type === "pdf") {
+//         await exportDashboardPDF(exportPayload);
+//         return;
+//       }
+
+//       await exportDashboardExcel(exportPayload);
 //     } catch (exportError) {
 //       console.error("Export failed:", exportError);
 //       alert("Failed to export dashboard report");
@@ -380,171 +381,169 @@
 
 //   return (
 //     <div className="container">
-//       <div id="dashboard-export">
-//         <div style={{ margin: "14px 0" }}>
-//           <StockSearchBar
-//             onSelectTicker={(t) => {
-//               const next = t.toUpperCase();
-//               setTicker(next);
-//               localStorage.setItem("lastDashboardTicker", next);
-//               nav(`/dashboard?t=${encodeURIComponent(next)}`);
-//             }}
-//             buttonLabel="Search"
+//       <div style={{ margin: "14px 0" }}>
+//         <StockSearchBar
+//           onSelectTicker={(t) => {
+//             const next = t.toUpperCase();
+//             setTicker(next);
+//             localStorage.setItem("lastDashboardTicker", next);
+//             nav(`/dashboard?t=${encodeURIComponent(next)}`);
+//           }}
+//           buttonLabel="Search"
+//         />
+//       </div>
+
+//       {loading && (
+//         <div style={{ marginTop: 12, color: "var(--muted)" }}>Loading...</div>
+//       )}
+
+//       {err && <div style={{ marginTop: 12, color: "var(--red)" }}>{err}</div>}
+
+//       <div style={{ marginTop: 14 }}>
+//         <PriceOverviewCard
+//           ticker={stock?.ticker ?? ticker}
+//           name={stock?.name ?? "Example Company"}
+//           price={stock?.price ?? 182.45}
+//           change={stock?.change ?? 2.13}
+//           changePct={stock?.changePct ?? 1.18}
+//           updatedAt={stock?.updatedAt ?? new Date().toISOString()}
+//           marketStatus={stock?.marketStatus ?? "Closed"}
+//           atCloseUpdatedAt={stock?.atCloseUpdatedAt ?? null}
+//           extendedLabel={stock?.extendedLabel ?? null}
+//           extendedPrice={stock?.extendedPrice ?? null}
+//           extendedChange={stock?.extendedChange ?? null}
+//           extendedChangePct={stock?.extendedChangePct ?? null}
+//           extendedUpdatedAt={stock?.extendedUpdatedAt ?? null}
+//         />
+//       </div>
+
+//       <div className="dashboardGrid" style={{ marginTop: 18 }}>
+//         <div className="span12">
+//           {historyLoading && (
+//             <div style={{ marginBottom: 10, color: "var(--muted)" }}>
+//               Loading historical data...
+//             </div>
+//           )}
+
+//           {historyErr && (
+//             <div style={{ marginBottom: 10, color: "var(--red)" }}>
+//               {historyErr}
+//             </div>
+//           )}
+
+//           <HistoricalChartCard
+//             series={historySeries}
+//             selectedRange={selectedRange}
+//             onRangeChange={setSelectedRange}
 //           />
 //         </div>
 
-//         {loading && (
-//           <div style={{ marginTop: 12, color: "var(--muted)" }}>Loading...</div>
-//         )}
+//         <div className="spanLeftTop">
+//           {indErr && (
+//             <div style={{ marginBottom: 10, color: "var(--red)" }}>
+//               {indErr}
+//             </div>
+//           )}
 
-//         {err && <div style={{ marginTop: 12, color: "var(--red)" }}>{err}</div>}
-
-//         <div style={{ marginTop: 14 }}>
-//           <PriceOverviewCard
-//             ticker={stock?.ticker ?? ticker}
-//             name={stock?.name ?? "Example Company"}
-//             price={stock?.price ?? 182.45}
-//             change={stock?.change ?? 2.13}
-//             changePct={stock?.changePct ?? 1.18}
-//             updatedAt={stock?.updatedAt ?? new Date().toISOString()}
-//             marketStatus={stock?.marketStatus ?? "Closed"}
-//             atCloseUpdatedAt={stock?.atCloseUpdatedAt ?? null}
-//             extendedLabel={stock?.extendedLabel ?? null}
-//             extendedPrice={stock?.extendedPrice ?? null}
-//             extendedChange={stock?.extendedChange ?? null}
-//             extendedChangePct={stock?.extendedChangePct ?? null}
-//             extendedUpdatedAt={stock?.extendedUpdatedAt ?? null}
+//           <TechnicalIndicatorsCard
+//             rsi={latestRsi}
+//             smaTrend={derivedSmaTrend}
 //           />
 //         </div>
 
-//         <div className="dashboardGrid" style={{ marginTop: 18 }}>
-//           <div className="span12">
-//             {historyLoading && (
-//               <div style={{ marginBottom: 10, color: "var(--muted)" }}>
-//                 Loading historical data...
-//               </div>
-//             )}
+//         <div className="spanRightTall">
+//           {predictionErr && (
+//             <div style={{ marginBottom: 10, color: "var(--red)" }}>
+//               {predictionErr}
+//             </div>
+//           )}
 
-//             {historyErr && (
-//               <div style={{ marginBottom: 10, color: "var(--red)" }}>
-//                 {historyErr}
-//               </div>
-//             )}
+//           <PredictionCard
+//             horizon={prediction?.horizon ?? "7-day"}
+//             trend={prediction?.trend ?? "Stable"}
+//             confidence={prediction?.confidence ?? 0}
+//             sentimentLabel={prediction?.sentimentLabel}
+//             sentimentScore={prediction?.sentimentScore}
+//             interpretation={prediction?.interpretation}
+//             suggestedAction={prediction?.suggestedAction}
+//             actionReason={prediction?.actionReason}
+//             explanation={prediction?.explanation}
+//             riskMessage={prediction?.riskMessage}
+//             risk={riskProfile}
+//             onChangeRisk={setRiskProfile}
+//           />
+//         </div>
 
-//             <HistoricalChartCard
-//               series={historySeries}
-//               selectedRange={selectedRange}
-//               onRangeChange={setSelectedRange}
-//             />
-//           </div>
+//         <div className="spanLeftBottom" style={{ minHeight: "100%" }}>
+//           {sentErr && (
+//             <div style={{ marginBottom: 10, color: "var(--red)" }}>
+//               {sentErr}
+//             </div>
+//           )}
 
-//           <div className="spanLeftTop">
-//             {indErr && (
-//               <div style={{ marginBottom: 10, color: "var(--red)" }}>
-//                 {indErr}
-//               </div>
-//             )}
+//           <div style={{ height: "100%" }}>
+//             <SentimentCard
+//               label={sentiment?.label ?? "Neutral"}
+//               score={sentiment?.score ?? 0}
+//               confidence={sentiment?.confidence ?? 0}
+//               items={(sentiment?.items ?? []).map((x) => {
+//                 const publishedAt =
+//                   typeof x.publishedAt === "number"
+//                     ? new Date(x.publishedAt * 1000).toISOString()
+//                     : x.publishedAt ?? null;
 
-//             <TechnicalIndicatorsCard
-//               rsi={latestRsi}
-//               smaTrend={derivedSmaTrend}
-//             />
-//           </div>
-
-//           <div className="spanRightTall">
-//             {predictionErr && (
-//               <div style={{ marginBottom: 10, color: "var(--red)" }}>
-//                 {predictionErr}
-//               </div>
-//             )}
-
-//             <PredictionCard
-//               horizon={prediction?.horizon ?? "7-day"}
-//               trend={prediction?.trend ?? "Stable"}
-//               confidence={prediction?.confidence ?? 0}
-//               sentimentLabel={prediction?.sentimentLabel}
-//               sentimentScore={prediction?.sentimentScore}
-//               interpretation={prediction?.interpretation}
-//               suggestedAction={prediction?.suggestedAction}
-//               actionReason={prediction?.actionReason}
-//               explanation={prediction?.explanation}
-//               riskMessage={prediction?.riskMessage}
-//               risk={riskProfile}
-//               onChangeRisk={setRiskProfile}
-//             />
-//           </div>
-
-//           <div className="spanLeftBottom" style={{ minHeight: "100%" }}>
-//             {sentErr && (
-//               <div style={{ marginBottom: 10, color: "var(--red)" }}>
-//                 {sentErr}
-//               </div>
-//             )}
-
-//             <div style={{ height: "100%" }}>
-//               <SentimentCard
-//                 label={sentiment?.label ?? "Neutral"}
-//                 score={sentiment?.score ?? 0}
-//                 confidence={sentiment?.confidence ?? 0}
-//                 items={(sentiment?.items ?? []).map((x) => {
-//                   const publishedAt =
-//                     typeof x.publishedAt === "number"
-//                       ? new Date(x.publishedAt * 1000).toISOString()
-//                       : x.publishedAt ?? null;
-
-//                   return {
-//                     title: x.title,
-//                     url: x.url,
-//                     imageUrl: x.imageUrl,
-//                     score: x.score,
-//                     publisher: x.publisher,
-//                     publishedAt,
-//                   };
-//                 })}
-//                 health={
-//                   sentiment?.health ?? {
-//                     provider: "none",
-//                     status: "error",
-//                     warning: "No data",
-//                   }
+//                 return {
+//                   title: x.title,
+//                   url: x.url,
+//                   imageUrl: x.imageUrl,
+//                   score: x.score,
+//                   publisher: x.publisher,
+//                   publishedAt,
+//                 };
+//               })}
+//               health={
+//                 sentiment?.health ?? {
+//                   provider: "none",
+//                   status: "error",
+//                   warning: "No data",
 //                 }
-//               />
-//             </div>
+//               }
+//             />
 //           </div>
 //         </div>
+//       </div>
 
-//         <div style={{ marginTop: 18 }}>
-//           <Card title="Actions">
-//             <div className="rowWrap">
-//               <button className="btn btnPrimary" onClick={handleAddWatchlist}>
-//                 ★ Add to Watchlist
-//               </button>
+//       <div style={{ marginTop: 18 }}>
+//         <Card title="Actions">
+//           <div className="rowWrap">
+//             <button className="btn btnPrimary" onClick={handleAddWatchlist}>
+//               ★ Add to Watchlist
+//             </button>
 
-//               {riskProfile === "Conservative" ? (
-//                 <button className="btn">⚠ Review Risk</button>
-//               ) : (
-//                 <button
-//                   className="btn"
-//                   onClick={() => nav(`/alerts?t=${encodeURIComponent(ticker)}`)}
-//                 >
-//                   ⏰ Set Alert
-//                 </button>
-//               )}
-
+//             {riskProfile === "Conservative" ? (
+//               <button className="btn">⚠ Review Risk</button>
+//             ) : (
 //               <button
-//                 className="btn btnPrimary"
-//                 onClick={() => setExportOpen(true)}
+//                 className="btn"
+//                 onClick={() => nav(`/alerts?t=${encodeURIComponent(ticker)}`)}
 //               >
-//                 ⬇ Export
+//                 ⏰ Set Alert
 //               </button>
-//             </div>
-//           </Card>
-//         </div>
+//             )}
 
-//         <div style={{ marginTop: 14, color: "var(--muted2)", fontSize: 13 }}>
-//           Educational use only. Not financial advice. All investment decisions are
-//           made at your own risk.
-//         </div>
+//             <button
+//               className="btn btnPrimary"
+//               onClick={() => setExportOpen(true)}
+//             >
+//               ⬇ Export
+//             </button>
+//           </div>
+//         </Card>
+//       </div>
+
+//       <div style={{ marginTop: 14, color: "var(--muted2)", fontSize: 13 }}>
+//         Educational use only. Not financial advice. All investment decisions are
+//         made at your own risk.
 //       </div>
 
 //       <ExportModal
@@ -567,6 +566,7 @@ import {
   fetchPrediction,
   addToWatchlist,
   fetchUserWatchlists,
+  checkUserAlerts,
 } from "../services/api";
 
 import type {
@@ -655,12 +655,12 @@ export default function DashboardPage() {
     const run = async () => {
       setLoading(true);
       setErr("");
+      setStock(null);
 
       try {
         const data = await fetchStock(ticker);
         setStock(data);
       } catch (e: any) {
-        setStock(null);
         setErr(e?.response?.data?.error ?? "Failed to fetch stock data");
       } finally {
         setLoading(false);
@@ -674,13 +674,12 @@ export default function DashboardPage() {
     const run = async () => {
       setHistoryLoading(true);
       setHistoryErr("");
+      setHistorySeries([]);
 
       try {
         const data = await fetchHistory(ticker, selectedRange);
         setHistorySeries(data.series ?? []);
-        setHistoryErr("");
       } catch (e: any) {
-        setHistorySeries([]);
         setHistoryErr(
           e?.response?.data?.error ?? "Failed to fetch historical data"
         );
@@ -695,15 +694,32 @@ export default function DashboardPage() {
   useEffect(() => {
     const run = async () => {
       setPredictionErr("");
+      setPrediction(null);
 
       try {
         const data = await fetchPrediction(ticker, riskProfile);
         setPrediction(data);
       } catch (e: any) {
-        setPrediction(null);
         setPredictionErr(
           e?.response?.data?.error ?? "Failed to fetch prediction"
         );
+        setPrediction({
+          ticker,
+          horizon: "7-day",
+          trend: "Stable",
+          confidence: 0,
+          featuresUsed: [],
+          sentimentScore: 0,
+          sentimentLabel: "Neutral",
+          explanation: "Prediction is temporarily unavailable.",
+          interpretation:
+            "The model could not generate a reliable forecast with the currently available data.",
+          suggestedAction: "Watchlist",
+          actionReason:
+            "Please review the stock manually until enough valid data is available.",
+          riskMessage:
+            "Prediction is unavailable, so decisions should not rely on this signal alone.",
+        });
       }
     };
 
@@ -718,15 +734,25 @@ export default function DashboardPage() {
 
       try {
         const data = await fetchSentiment(ticker);
-        if (alive) {
-          setSentiment(data);
-          setSentErr("");
-        }
+        if (!alive) return;
+        setSentiment(data);
       } catch (e: any) {
-        if (alive) {
-          setSentiment(null);
-          setSentErr(e?.response?.data?.error ?? "Failed to fetch sentiment");
-        }
+        if (!alive) return;
+
+        setSentErr(e?.response?.data?.error ?? "Failed to fetch sentiment");
+        setSentiment({
+          ticker,
+          label: "Neutral",
+          score: 0,
+          confidence: 0,
+          updatedAt: "",
+          items: [],
+          health: {
+            provider: "none",
+            status: "error",
+            warning: "Sentiment data is temporarily unavailable.",
+          },
+        });
       }
     };
 
@@ -747,27 +773,12 @@ export default function DashboardPage() {
 
       try {
         const data = await fetchIndicators(ticker);
-
         if (!alive) return;
-
-        setIndicators(data ?? EMPTY_INDICATORS);
-        setIndErr("");
+        setIndicators(data ?? { ...EMPTY_INDICATORS, ticker });
       } catch (e: any) {
         if (!alive) return;
-
         console.error("Indicator fetch error:", e);
-
-        setIndicators((prev) => {
-          if (prev && prev.ticker === ticker) {
-            return prev;
-          }
-
-          return {
-            ...EMPTY_INDICATORS,
-            ticker,
-          };
-        });
-
+        setIndicators({ ...EMPTY_INDICATORS, ticker });
         setIndErr("");
       }
     };
@@ -780,6 +791,41 @@ export default function DashboardPage() {
       window.clearInterval(id);
     };
   }, [ticker]);
+
+  useEffect(() => {
+    const raw = localStorage.getItem("user");
+    if (!raw) return;
+
+    let userId: number | null = null;
+
+    try {
+      const parsed = JSON.parse(raw);
+      userId = parsed?.id ?? null;
+    } catch {
+      userId = null;
+    }
+
+    if (!userId) return;
+
+    let alive = true;
+
+    const runCheck = async () => {
+      try {
+        await checkUserAlerts(userId as number);
+      } catch (error) {
+        if (!alive) return;
+        console.error("Alert check failed:", error);
+      }
+    };
+
+    runCheck();
+    const intervalId = window.setInterval(runCheck, 60000);
+
+    return () => {
+      alive = false;
+      window.clearInterval(intervalId);
+    };
+  }, []);
 
   const latestRsi =
     indicators?.rsi14
@@ -960,10 +1006,10 @@ export default function DashboardPage() {
       <div style={{ marginTop: 14 }}>
         <PriceOverviewCard
           ticker={stock?.ticker ?? ticker}
-          name={stock?.name ?? "Example Company"}
-          price={stock?.price ?? 182.45}
-          change={stock?.change ?? 2.13}
-          changePct={stock?.changePct ?? 1.18}
+          name={stock?.name ?? ticker}
+          price={stock?.price ?? 0}
+          change={stock?.change ?? 0}
+          changePct={stock?.changePct ?? 0}
           updatedAt={stock?.updatedAt ?? new Date().toISOString()}
           marketStatus={stock?.marketStatus ?? "Closed"}
           atCloseUpdatedAt={stock?.atCloseUpdatedAt ?? null}
@@ -1078,16 +1124,12 @@ export default function DashboardPage() {
               ★ Add to Watchlist
             </button>
 
-            {riskProfile === "Conservative" ? (
-              <button className="btn">⚠ Review Risk</button>
-            ) : (
-              <button
-                className="btn"
-                onClick={() => nav(`/alerts?t=${encodeURIComponent(ticker)}`)}
-              >
-                ⏰ Set Alert
-              </button>
-            )}
+            <button
+              className="btn"
+              onClick={() => nav(`/alerts?t=${encodeURIComponent(ticker)}`)}
+            >
+              ⏰ Set Alert
+            </button>
 
             <button
               className="btn btnPrimary"

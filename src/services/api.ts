@@ -266,3 +266,8 @@ export async function deleteAlert(alertId: string) {
   const res = await axios.delete(`${API_BASE}/api/alerts/${alertId}`);
   return res.data;
 }
+
+export async function checkUserAlerts(userId: number) {
+  const res = await axios.post(`${API_BASE}/api/users/${userId}/alerts/check`);
+  return res.data;
+}
