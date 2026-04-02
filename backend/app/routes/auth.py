@@ -29,7 +29,6 @@ def _row_to_user_profile(row):
             "emailAlerts": bool(row["email_alerts"]),
             "priceAlerts": bool(row["price_alerts"]),
             "newsAlerts": bool(row["news_alerts"]),
-            "earningsAlerts": bool(row["earnings_alerts"]),
             "smsNotifications": bool(row["sms_notifications"]),
             "pushNotifications": bool(row["push_notifications"]),
         },
@@ -179,7 +178,6 @@ def update_profile(user_id: int):
     alert_types = [
         bool(notifications.get("priceAlerts", True)),
         bool(notifications.get("newsAlerts", True)),
-        bool(notifications.get("earningsAlerts", False)),
     ]
 
     delivery_methods = [
@@ -210,7 +208,6 @@ def update_profile(user_id: int):
             email_alerts = ?,
             price_alerts = ?,
             news_alerts = ?,
-            earnings_alerts = ?,
             sms_notifications = ?,
             push_notifications = ?
         WHERE id = ?;
@@ -229,7 +226,6 @@ def update_profile(user_id: int):
         1 if notifications.get("emailAlerts", True) else 0,
         1 if notifications.get("priceAlerts", True) else 0,
         1 if notifications.get("newsAlerts", True) else 0,
-        1 if notifications.get("earningsAlerts", False) else 0,
         1 if notifications.get("smsNotifications", False) else 0,
         1 if notifications.get("pushNotifications", False) else 0,
         user_id

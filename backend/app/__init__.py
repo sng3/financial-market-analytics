@@ -7,6 +7,7 @@ from .routes import stocks_bp, watchlists_bp, alerts_bp
 from .routes.auth import bp as auth_bp
 
 from app.services.alert_check_service import check_all_users_price_alerts
+from app.services.news_alert_service import check_all_users_news_alerts
 
 # keep scheduler global so it doesn’t start multiple times
 _scheduler = None
@@ -49,15 +50,26 @@ def create_app():
         def run_alert_checks():
             with app.app_context():
                 try:
-                    result = check_all_users_price_alerts()
+                    price_result = check_all_users_price_alerts()
                     print(
-                        "🔔 Alert scheduler:",
-                        f"users={result['usersChecked']}, "
-                        f"checked={result['alertsChecked']}, "
-                        f"triggered={result['alertsTriggered']}"
+                        "🔔 Price alert scheduler:",
+                        f"users={price_result['usersChecked']}, "
+                        f"checked={price_result['alertsChecked']}, "
+                        f"triggered={price_result['alertsTriggered']}"
                     )
                 except Exception as e:
-                    print("❌ Scheduler error:", e)
+                    print("❌ Price scheduler error:", e)
+
+                try:
+                    news_result = check_all_users_news_alerts()
+                    print(
+                        "📰 News alert scheduler:",
+                        f"users={news_result['usersChecked']}, "
+                        f"checked={news_result['tickersChecked']}, "
+                        f"triggered={news_result['alertsTriggered']}"
+                    )
+                except Exception as e:
+                    print("❌ News scheduler error:", e)
 
         # run every 60 seconds
         _scheduler.add_job(

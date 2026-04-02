@@ -46,7 +46,6 @@ def init_db():
             email_alerts INTEGER NOT NULL DEFAULT 1,
             price_alerts INTEGER NOT NULL DEFAULT 1,
             news_alerts INTEGER NOT NULL DEFAULT 1,
-            earnings_alerts INTEGER NOT NULL DEFAULT 0,
             sms_notifications INTEGER NOT NULL DEFAULT 0,
             push_notifications INTEGER NOT NULL DEFAULT 0,
             country TEXT NOT NULL DEFAULT 'United States',
@@ -85,6 +84,18 @@ def init_db():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             triggered_at TIMESTAMP,
             last_checked_at TIMESTAMP,
+            FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+    """)
+
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS news_alerts_sent (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            ticker TEXT NOT NULL,
+            article_url TEXT NOT NULL,
+            sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(user_id, article_url),
             FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
         );
     """)

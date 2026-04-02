@@ -13,7 +13,6 @@ export type UserProfile = {
     emailAlerts: boolean;
     priceAlerts: boolean;
     newsAlerts: boolean;
-    earningsAlerts: boolean;
     smsNotifications: boolean;
     pushNotifications: boolean;
   };

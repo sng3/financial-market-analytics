@@ -13,7 +13,6 @@ CREATE TABLE IF NOT EXISTS users (
   email_alerts INTEGER DEFAULT 1,
   price_alerts INTEGER DEFAULT 1,
   news_alerts INTEGER DEFAULT 1,
-  earnings_alerts INTEGER DEFAULT 0,
   sms_notifications INTEGER DEFAULT 0,
   push_notifications INTEGER DEFAULT 0,
   country TEXT DEFAULT 'United States',
