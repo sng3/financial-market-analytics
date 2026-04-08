@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 
 import {
@@ -78,8 +78,12 @@ export default function DashboardPage() {
 
   const [prediction, setPrediction] = useState<PredictionResponse | null>(null);
   const [predictionErr, setPredictionErr] = useState("");
+  const [predictionLoaded, setPredictionLoaded] = useState(false);
+  const [predictionLoading, setPredictionLoading] = useState(false);
 
   const [riskProfile, setRiskProfile] = useState<RiskProfile>("Moderate");
+
+  const initialLoadKeyRef = useRef<string>("");
 
   useEffect(() => {
     const nextTicker =
@@ -95,145 +99,109 @@ export default function DashboardPage() {
   }, [ticker]);
 
   useEffect(() => {
-    const run = async () => {
+    setPredictionLoaded(false);
+    setPrediction(null);
+    setPredictionErr("");
+  }, [ticker]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadKey = `${ticker}|${selectedRange}`;
+
+    if (initialLoadKeyRef.current === loadKey) return;
+    initialLoadKeyRef.current = loadKey;
+
+    const timers: number[] = [];
+
+    const loadStock = async () => {
       setLoading(true);
       setErr("");
       setStock(null);
 
       try {
         const data = await fetchStock(ticker);
-        setStock(data);
+        if (!cancelled) setStock(data);
       } catch (e: any) {
-        setErr(e?.response?.data?.error ?? "Failed to fetch stock data");
+        if (!cancelled) {
+          setErr(e?.response?.data?.error ?? "Failed to fetch stock data");
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
-    run();
-  }, [ticker]);
-
-  useEffect(() => {
-    const run = async () => {
+    const loadHistory = async () => {
       setHistoryLoading(true);
       setHistoryErr("");
       setHistorySeries([]);
 
       try {
         const data = await fetchHistory(ticker, selectedRange);
-        setHistorySeries(data.series ?? []);
+        if (!cancelled) setHistorySeries(data.series ?? []);
       } catch (e: any) {
-        setHistoryErr(
-          e?.response?.data?.error ?? "Failed to fetch historical data"
-        );
+        if (!cancelled) {
+          setHistoryErr(
+            e?.response?.data?.error ?? "Failed to fetch historical data"
+          );
+        }
       } finally {
-        setHistoryLoading(false);
+        if (!cancelled) setHistoryLoading(false);
       }
     };
 
-    run();
-  }, [ticker, selectedRange]);
-
-  useEffect(() => {
-    const run = async () => {
-      setPredictionErr("");
-      setPrediction(null);
-
-      try {
-        const data = await fetchPrediction(ticker, riskProfile);
-        setPrediction(data);
-      } catch (e: any) {
-        setPredictionErr(
-          e?.response?.data?.error ?? "Failed to fetch prediction"
-        );
-        setPrediction({
-          ticker,
-          horizon: "7-day",
-          trend: "Stable",
-          confidence: 0,
-          featuresUsed: [],
-          sentimentScore: 0,
-          sentimentLabel: "Neutral",
-          explanation: "Prediction is temporarily unavailable.",
-          interpretation:
-            "The model could not generate a reliable forecast with the currently available data.",
-          suggestedAction: "Watchlist",
-          actionReason:
-            "Please review the stock manually until enough valid data is available.",
-          riskMessage:
-            "Prediction is unavailable, so decisions should not rely on this signal alone.",
-        });
-      }
-    };
-
-    run();
-  }, [ticker, riskProfile]);
-
-  useEffect(() => {
-    let alive = true;
-
-    const load = async () => {
-      setSentErr("");
-
-      try {
-        const data = await fetchSentiment(ticker);
-        if (!alive) return;
-        setSentiment(data);
-      } catch (e: any) {
-        if (!alive) return;
-
-        setSentErr(e?.response?.data?.error ?? "Failed to fetch sentiment");
-        setSentiment({
-          ticker,
-          label: "Neutral",
-          score: 0,
-          confidence: 0,
-          updatedAt: "",
-          items: [],
-          health: {
-            provider: "none",
-            status: "error",
-            warning: "Sentiment data is temporarily unavailable.",
-          },
-        });
-      }
-    };
-
-    load();
-    const id = window.setInterval(load, 30000);
-
-    return () => {
-      alive = false;
-      window.clearInterval(id);
-    };
-  }, [ticker]);
-
-  useEffect(() => {
-    let alive = true;
-
-    const load = async () => {
+    const loadIndicators = async () => {
       setIndErr("");
 
       try {
         const data = await fetchIndicators(ticker);
-        if (!alive) return;
-        setIndicators(data ?? { ...EMPTY_INDICATORS, ticker });
+        if (!cancelled) {
+          setIndicators(data ?? { ...EMPTY_INDICATORS, ticker });
+        }
       } catch (e: any) {
-        if (!alive) return;
-        console.error("Indicator fetch error:", e);
-        setIndicators({ ...EMPTY_INDICATORS, ticker });
-        setIndErr("");
+        if (!cancelled) {
+          console.error("Indicator fetch error:", e);
+          setIndicators({ ...EMPTY_INDICATORS, ticker });
+          setIndErr("");
+        }
       }
     };
 
-    load();
-    const id = window.setInterval(load, 30000);
+    const loadSentiment = async () => {
+      setSentErr("");
+
+      try {
+        const data = await fetchSentiment(ticker);
+        if (!cancelled) setSentiment(data);
+      } catch (e: any) {
+        if (!cancelled) {
+          setSentErr(e?.response?.data?.error ?? "Failed to fetch sentiment");
+          setSentiment({
+            ticker,
+            label: "Neutral",
+            score: 0,
+            confidence: 0,
+            updatedAt: "",
+            items: [],
+            health: {
+              provider: "none",
+              status: "error",
+              warning: "Sentiment data is temporarily unavailable.",
+            },
+          });
+        }
+      }
+    };
+
+    loadStock();
+    timers.push(window.setTimeout(loadHistory, 350));
+    timers.push(window.setTimeout(loadIndicators, 900));
+    timers.push(window.setTimeout(loadSentiment, 1500));
 
     return () => {
-      alive = false;
-      window.clearInterval(id);
+      cancelled = true;
+      timers.forEach(window.clearTimeout);
     };
-  }, [ticker]);
+  }, [ticker, selectedRange]);
 
   useEffect(() => {
     const raw = localStorage.getItem("user");
@@ -269,6 +237,48 @@ export default function DashboardPage() {
       window.clearInterval(intervalId);
     };
   }, []);
+
+  const loadPrediction = async () => {
+    setPredictionLoading(true);
+    setPredictionErr("");
+    setPrediction(null);
+
+    try {
+      const data = await fetchPrediction(ticker, riskProfile);
+      setPrediction(data);
+      setPredictionLoaded(true);
+    } catch (e: any) {
+      setPredictionErr(
+        e?.response?.data?.error ?? "Failed to fetch prediction"
+      );
+      setPrediction({
+        ticker,
+        horizon: "7-day",
+        trend: "Stable",
+        confidence: 0,
+        featuresUsed: [],
+        sentimentScore: 0,
+        sentimentLabel: "Neutral",
+        explanation: "Prediction is temporarily unavailable.",
+        interpretation:
+          "The model could not generate a reliable forecast with the currently available data.",
+        suggestedAction: "Watchlist",
+        actionReason:
+          "Please review the stock manually until enough valid data is available.",
+        riskMessage:
+          "Prediction is unavailable, so decisions should not rely on this signal alone.",
+      });
+      setPredictionLoaded(true);
+    } finally {
+      setPredictionLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!predictionLoaded) return;
+    loadPrediction();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [riskProfile]);
 
   const latestRsi =
     indicators?.rsi14
@@ -505,20 +515,37 @@ export default function DashboardPage() {
             </div>
           )}
 
-          <PredictionCard
-            horizon={prediction?.horizon ?? "7-day"}
-            trend={prediction?.trend ?? "Stable"}
-            confidence={prediction?.confidence ?? 0}
-            sentimentLabel={prediction?.sentimentLabel}
-            sentimentScore={prediction?.sentimentScore}
-            interpretation={prediction?.interpretation}
-            suggestedAction={prediction?.suggestedAction}
-            actionReason={prediction?.actionReason}
-            explanation={prediction?.explanation}
-            riskMessage={prediction?.riskMessage}
-            risk={riskProfile}
-            onChangeRisk={setRiskProfile}
-          />
+          {!predictionLoaded ? (
+            <Card title="Prediction">
+              <div className="rowWrap">
+                <button
+                  className="btn btnPrimary"
+                  onClick={loadPrediction}
+                  disabled={predictionLoading}
+                >
+                  {predictionLoading ? "Loading Prediction..." : "Load Prediction"}
+                </button>
+              </div>
+              <div style={{ marginTop: 10, color: "var(--muted)" }}>
+                Prediction is loaded on demand to keep the dashboard responsive.
+              </div>
+            </Card>
+          ) : (
+            <PredictionCard
+              horizon={prediction?.horizon ?? "7-day"}
+              trend={prediction?.trend ?? "Stable"}
+              confidence={prediction?.confidence ?? 0}
+              sentimentLabel={prediction?.sentimentLabel}
+              sentimentScore={prediction?.sentimentScore}
+              interpretation={prediction?.interpretation}
+              suggestedAction={prediction?.suggestedAction}
+              actionReason={prediction?.actionReason}
+              explanation={prediction?.explanation}
+              riskMessage={prediction?.riskMessage}
+              risk={riskProfile}
+              onChangeRisk={setRiskProfile}
+            />
+          )}
         </div>
 
         <div className="spanLeftBottom" style={{ minHeight: "100%" }}>

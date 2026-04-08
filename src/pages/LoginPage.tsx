@@ -5,6 +5,7 @@ import { loginUser } from "../services/api";
 
 export default function LoginPage() {
   const nav = useNavigate();
+
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
   const [error, setError] = useState("");
@@ -20,14 +21,18 @@ export default function LoginPage() {
 
     try {
       setLoading(true);
+
       const user = await loginUser({
         email: email.trim(),
         password: pw,
       });
 
+      // store user session
       localStorage.setItem("user", JSON.stringify(user));
-      nav("/dashboard");
-      window.location.reload();
+
+      // navigate to dashboard
+      nav("/dashboard", { replace: true });
+
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
@@ -40,7 +45,10 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="container" style={{ display: "grid", placeItems: "center", paddingTop: 28 }}>
+    <div
+      className="container"
+      style={{ display: "grid", placeItems: "center", paddingTop: 28 }}
+    >
       <div style={{ width: "min(520px, 100%)" }}>
         <Card title="Login">
           <div style={{ display: "grid", gap: 10 }}>
@@ -50,6 +58,7 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
+
             <input
               className="input"
               placeholder="Password"
@@ -73,12 +82,19 @@ export default function LoginPage() {
               </div>
             )}
 
-            <button className="btn btnPrimary" onClick={handleLogin} disabled={loading}>
+            <button
+              className="btn btnPrimary"
+              onClick={handleLogin}
+              disabled={loading}
+            >
               {loading ? "Logging In..." : "Login"}
             </button>
 
             <div style={{ color: "var(--muted)", fontSize: 13 }}>
-              No account? <Link to="/signup" style={{ color: "var(--blue)" }}>Sign up</Link>
+              No account?{" "}
+              <Link to="/signup" style={{ color: "var(--blue)" }}>
+                Sign up
+              </Link>
             </div>
           </div>
         </Card>
@@ -86,4 +102,3 @@ export default function LoginPage() {
     </div>
   );
 }
-
