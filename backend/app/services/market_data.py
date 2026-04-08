@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import time as time_module
 from datetime import datetime, timezone, time
 from typing import Any, Dict, List, Optional
 from zoneinfo import ZoneInfo
 
 import yfinance as yf
+
+from app.services.cache import cache_get, cache_set
 
 NY_TZ = ZoneInfo("America/New_York")
 
@@ -48,6 +51,34 @@ def _map_range_to_period_interval(range_value: str) -> tuple[str, str]:
     return mapping.get((range_value or "1Y").upper(), ("1y", "1d"))
 
 
+def _is_rate_limited_error(exc: Exception) -> bool:
+    msg = str(exc).lower()
+    return (
+        "too many requests" in msg
+        or "rate limited" in msg
+        or "429" in msg
+    )
+
+
+def _retry_yahoo(fetch_fn, *, retries: int = 3, base_sleep: float = 1.25):
+    last_error = None
+
+    for attempt in range(retries):
+        try:
+            return fetch_fn()
+        except Exception as e:
+            last_error = e
+
+            if not _is_rate_limited_error(e):
+                raise
+
+            sleep_seconds = base_sleep * (attempt + 1)
+            print(f"Yahoo retry {attempt + 1}/{retries} after rate limit: {e}")
+            time_module.sleep(sleep_seconds)
+
+    raise last_error if last_error else RuntimeError("Yahoo request failed")
+
+
 # =========================
 # SEARCH
 # =========================
@@ -56,8 +87,13 @@ def search_tickers(q: str) -> List[Dict[str, str]]:
     if not q:
         return []
 
+    cache_key = f"search:{q.lower()}"
+    cached = cache_get(cache_key)
+    if cached is not None:
+        return cached
+
     try:
-        search = yf.Search(q, max_results=10)
+        search = _retry_yahoo(lambda: yf.Search(q, max_results=10))
         quotes = getattr(search, "quotes", []) or []
 
         results: List[Dict[str, str]] = []
@@ -69,21 +105,24 @@ def search_tickers(q: str) -> List[Dict[str, str]]:
                 item.get("shortname")
                 or item.get("longname")
                 or item.get("displayName")
-                or ""
+                or symbol
             ).strip()
 
-            if not symbol or not name or symbol in seen:
+            if not symbol or symbol in seen:
                 continue
 
             seen.add(symbol)
             results.append({
                 "ticker": symbol,
-                "name": name,
+                "name": name or symbol,
             })
 
-        return results[:10]
+        results = results[:10]
+        cache_set(cache_key, results, ttl_seconds=300)
+        return results
 
-    except Exception:
+    except Exception as e:
+        print(f"SEARCH ERROR: {q} {e}")
         return []
 
 
@@ -95,15 +134,18 @@ def get_quote(ticker: str) -> Dict[str, Any]:
     if not ticker:
         raise ValueError("ticker required")
 
+    cache_key = f"svc_quote:{ticker}"
+    cached = cache_get(cache_key)
+    if cached is not None:
+        return cached
+
     stock = yf.Ticker(ticker)
 
-    info: Dict[str, Any] = {}
-    try:
-        info = stock.info or {}
-    except Exception:
-        info = {}
-
-    hist = stock.history(period="5d", interval="1d", auto_adjust=False)
+    hist = _retry_yahoo(
+        lambda: stock.history(period="5d", interval="1d", auto_adjust=False),
+        retries=3,
+        base_sleep=1.25,
+    )
 
     if hist is None or hist.empty or "Close" not in hist.columns:
         raise RuntimeError(f"No quote data found for {ticker}")
@@ -119,16 +161,9 @@ def get_quote(ticker: str) -> Dict[str, Any]:
     change = price - prev_close
     change_pct = (change / prev_close) * 100 if prev_close else 0.0
 
-    name = (
-        info.get("shortName")
-        or info.get("longName")
-        or info.get("displayName")
-        or ticker
-    )
-
-    return {
+    payload = {
         "ticker": ticker,
-        "name": name,
+        "name": ticker,
         "price": round(price, 2),
         "prevClose": round(prev_close, 2),
         "change": round(change, 2),
@@ -143,6 +178,9 @@ def get_quote(ticker: str) -> Dict[str, Any]:
         "atCloseUpdatedAt": None,
     }
 
+    cache_set(cache_key, payload, ttl_seconds=30)
+    return payload
+
 
 # =========================
 # HISTORY (CHART)
@@ -154,20 +192,31 @@ def get_history_by_range(ticker: str, range_value: str = "1Y") -> Dict[str, Any]
         if not ticker:
             raise ValueError("ticker required")
 
+        cache_key = f"svc_history:{ticker}:{(range_value or '1Y').upper()}"
+        cached = cache_get(cache_key)
+        if cached is not None:
+            return cached
+
         period, interval = _map_range_to_period_interval(range_value)
 
-        df = yf.Ticker(ticker).history(
-            period=period,
-            interval=interval,
-            auto_adjust=False,
+        df = _retry_yahoo(
+            lambda: yf.Ticker(ticker).history(
+                period=period,
+                interval=interval,
+                auto_adjust=False,
+            ),
+            retries=3,
+            base_sleep=1.25,
         )
 
         if df is None or df.empty or "Close" not in df.columns:
-            return {
+            payload = {
                 "ticker": ticker,
                 "range": range_value,
                 "series": [],
             }
+            cache_set(cache_key, payload, ttl_seconds=60)
+            return payload
 
         series = []
         for idx, row in df.iterrows():
@@ -180,11 +229,14 @@ def get_history_by_range(ticker: str, range_value: str = "1Y") -> Dict[str, Any]
                 "v": round(close_value, 2),
             })
 
-        return {
+        payload = {
             "ticker": ticker,
             "range": range_value,
             "series": series,
         }
+
+        cache_set(cache_key, payload, ttl_seconds=300)
+        return payload
 
     except Exception as e:
         print("HISTORY ERROR:", ticker, range_value, e)

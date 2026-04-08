@@ -1,42 +1,44 @@
-import json
 import time
-from app.db import get_db
+import threading
+
+_cache = {}
+_cache_lock = threading.Lock()
 
 
 def cache_get(cache_key: str):
-    db = get_db()
     now = int(time.time())
 
-    row = db.execute(
-        "SELECT payload_json, updated_at, ttl_seconds FROM cache WHERE cache_key = ?;",
-        (cache_key,),
-    ).fetchone()
+    with _cache_lock:
+        entry = _cache.get(cache_key)
+        if not entry:
+            return None
 
-    if not row:
-        return None
+        updated_at = entry["updated_at"]
+        ttl_seconds = entry["ttl_seconds"]
 
-    if int(row["updated_at"]) + int(row["ttl_seconds"]) < now:
-        return None
+        if updated_at + ttl_seconds < now:
+            _cache.pop(cache_key, None)
+            return None
 
-    try:
-        return json.loads(row["payload_json"])
-    except Exception:
-        return None
+        return entry["payload"]
 
 
-def cache_set(cache_key: str, payload: dict, ttl_seconds: int):
-    db = get_db()
+def cache_set(cache_key: str, payload, ttl_seconds: int):
     now = int(time.time())
 
-    db.execute(
-        """
-        INSERT INTO cache(cache_key, payload_json, updated_at, ttl_seconds)
-        VALUES(?,?,?,?)
-        ON CONFLICT(cache_key) DO UPDATE SET
-            payload_json=excluded.payload_json,
-            updated_at=excluded.updated_at,
-            ttl_seconds=excluded.ttl_seconds
-        """,
-        (cache_key, json.dumps(payload), now, int(ttl_seconds)),
-    )
-    db.commit()
+    with _cache_lock:
+        _cache[cache_key] = {
+            "payload": payload,
+            "updated_at": now,
+            "ttl_seconds": int(ttl_seconds),
+        }
+
+
+def cache_delete(cache_key: str):
+    with _cache_lock:
+        _cache.pop(cache_key, None)
+
+
+def cache_clear():
+    with _cache_lock:
+        _cache.clear()
