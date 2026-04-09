@@ -1,4 +1,4 @@
-// import React, { useEffect, useMemo, useState } from "react";
+// import { useEffect, useMemo, useState } from "react";
 // import Card from "../components/Card";
 // import InfoDialog from "../components/InfoDialog";
 // import { useNavigate } from "react-router-dom";
@@ -20,7 +20,6 @@
 //     emailAlerts: true,
 //     priceAlerts: true,
 //     newsAlerts: true,
-//     earningsAlerts: false,
 //     smsNotifications: false,
 //     pushNotifications: false,
 //   },
@@ -186,9 +185,7 @@
 //   }, [timeZoneQuery]);
 
 //   const hasSelectedAlertType =
-//     user.notifications.priceAlerts ||
-//     user.notifications.newsAlerts ||
-//     user.notifications.earningsAlerts;
+//     user.notifications.priceAlerts || user.notifications.newsAlerts;
 
 //   const hasSelectedDeliveryMethod =
 //     user.notifications.emailAlerts ||
@@ -408,6 +405,24 @@
 //               <option value="1 - 5 Years">1 - 5 Years</option>
 //               <option value="5+ Years">5+ Years</option>
 //             </select>
+
+//             <div
+//               style={{
+//                 marginTop: 4,
+//                 padding: 12,
+//                 borderRadius: 12,
+//                 border: "1px solid rgba(74,144,226,0.24)",
+//                 background: "rgba(74,144,226,0.08)",
+//                 color: "var(--muted)",
+//                 fontSize: 13,
+//                 lineHeight: 1.6,
+//               }}
+//             >
+//               These preferences are used to personalize your dashboard. Risk
+//               tolerance affects prediction interpretation, horizon affects
+//               default chart range, and goal helps guide suggested stocks and
+//               learning focus.
+//             </div>
 //           </div>
 //         </Card>
 //       </div>
@@ -437,6 +452,23 @@
 //                 </button>
 //               );
 //             })}
+//           </div>
+
+//           <div
+//             style={{
+//               marginTop: 12,
+//               padding: 12,
+//               borderRadius: 12,
+//               border: "1px solid rgba(255,255,255,0.08)",
+//               background: "rgba(255,255,255,0.03)",
+//               color: "var(--muted)",
+//               fontSize: 13,
+//               lineHeight: 1.6,
+//             }}
+//           >
+//             Your selected sectors are used to generate personalized stock ideas
+//             on the dashboard so the app can recommend companies that better match
+//             your interests.
 //           </div>
 //         </Card>
 //       </div>
@@ -535,24 +567,6 @@
 //                     }}
 //                   />
 //                   News alerts
-//                 </label>
-
-//                 <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
-//                   <input
-//                     type="checkbox"
-//                     checked={user.notifications.earningsAlerts}
-//                     onChange={(e) => {
-//                       setNotificationError("");
-//                       setUser({
-//                         ...user,
-//                         notifications: {
-//                           ...user.notifications,
-//                           earningsAlerts: e.target.checked,
-//                         },
-//                       });
-//                     }}
-//                   />
-//                   Earnings alerts
 //                 </label>
 //               </div>
 //             </div>
@@ -681,7 +695,7 @@
 //             </strong>
 //             <div style={{ marginTop: 4 }}>
 //               Select one or more alert categories to receive notifications for
-//               price movements, market news, and earnings announcements.
+//               price movements and market news.
 //             </div>
 //           </div>
 
@@ -690,8 +704,10 @@
 //               Delivery
 //             </strong>
 //             <div style={{ marginTop: 4 }}>
-//               Select one or more delivery methods to receive notifications. If any alert type is enabled, at least one delivery method must also be enabled. 
-//               Likewise, if any delivery method is enabled, at least one alert type must also be selected.
+//               Select one or more delivery methods to receive notifications. If
+//               any alert type is enabled, at least one delivery method must also
+//               be enabled. Likewise, if any delivery method is enabled, at least
+//               one alert type must also be selected.
 //             </div>
 //           </div>
 //         </div>
@@ -927,6 +943,7 @@ export default function ProfilePage() {
       setCountryQuery(updated.country);
       setTimeZoneQuery(getTimeZoneLabel(updated.timeZone));
       localStorage.setItem("user", JSON.stringify(updated));
+      localStorage.setItem("profileUpdatedAt", Date.now().toString());
       setSaved("Profile updated successfully.");
       setTimeout(() => setSaved(""), 2000);
     } catch {
@@ -951,6 +968,7 @@ export default function ProfilePage() {
     try {
       await deleteProfile(user.id);
       localStorage.removeItem("user");
+      localStorage.removeItem("profileUpdatedAt");
       alert("Your account has been deleted.");
       nav("/signup");
       window.location.reload();

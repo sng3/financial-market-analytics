@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import type { RiskProfile } from "./RiskRecommendationCard";
 import Card from "./Card";
 import InfoDialog from "./InfoDialog";

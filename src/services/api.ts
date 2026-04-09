@@ -159,6 +159,36 @@ export async function fetchPrediction(
 }
 
 /* =========================
+   Recommendations
+========================= */
+export type RecommendationItem = {
+  ticker: string;
+  name: string;
+  sector: string;
+  price: number | null;
+  changePct: number | null;
+  reason: string;
+};
+
+export type RecommendationsResponse = {
+  userId: number;
+  riskTolerance: "Conservative" | "Moderate" | "Aggressive";
+  experience: "Beginner" | "Intermediate" | "Advanced";
+  goal: "Long Term Growth" | "Income" | "Short Term Trading" | "Learning";
+  horizon: "< 1 Year" | "1 - 5 Years" | "5+ Years";
+  favoriteSectors: string[];
+  summary: string;
+  items: RecommendationItem[];
+};
+
+export async function fetchRecommendations(
+  userId: number
+): Promise<RecommendationsResponse> {
+  const res = await axios.get(`${API_BASE}/api/recommendations/${userId}`);
+  return res.data as RecommendationsResponse;
+}
+
+/* =========================
    Watchlists
 ========================= */
 export type Watchlist = {
