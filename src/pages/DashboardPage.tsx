@@ -92,6 +92,31 @@
 //   const [recommendationsErr, setRecommendationsErr] = useState("");
 //   const [recommendationsLoading, setRecommendationsLoading] = useState(false);
 
+//   const loadUserProfile = async () => {
+//     const raw = localStorage.getItem("user");
+//     if (!raw) {
+//       setUserProfile(null);
+//       return;
+//     }
+
+//     try {
+//       const parsed = JSON.parse(raw);
+//       const userId = parsed?.id as number | undefined;
+
+//       if (!userId) {
+//         setUserProfile(null);
+//         return;
+//       }
+
+//       const freshProfile = await fetchProfile(userId);
+//       setUserProfile(freshProfile);
+//       setRiskProfile(freshProfile.riskTolerance);
+//     } catch (error) {
+//       console.error("Failed to load profile for dashboard:", error);
+//       setUserProfile(null);
+//     }
+//   };
+
 //   useEffect(() => {
 //     const nextTicker =
 //       params.get("t")?.toUpperCase() ||
@@ -106,32 +131,27 @@
 //   }, [ticker]);
 
 //   useEffect(() => {
-//     const loadUserProfile = async () => {
-//       const raw = localStorage.getItem("user");
-//       if (!raw) {
-//         setUserProfile(null);
-//         return;
-//       }
+//     loadUserProfile();
+//   }, []);
 
-//       try {
-//         const parsed = JSON.parse(raw);
-//         const userId = parsed?.id as number | undefined;
+//   useEffect(() => {
+//     const handleFocus = () => {
+//       loadUserProfile();
+//     };
 
-//         if (!userId) {
-//           setUserProfile(null);
-//           return;
-//         }
-
-//         const freshProfile = await fetchProfile(userId);
-//         setUserProfile(freshProfile);
-//         setRiskProfile(freshProfile.riskTolerance);
-//       } catch (error) {
-//         console.error("Failed to load profile for dashboard:", error);
-//         setUserProfile(null);
+//     const handleStorage = (event: StorageEvent) => {
+//       if (event.key === "profileUpdatedAt" || event.key === "user") {
+//         loadUserProfile();
 //       }
 //     };
 
-//     loadUserProfile();
+//     window.addEventListener("focus", handleFocus);
+//     window.addEventListener("storage", handleStorage);
+
+//     return () => {
+//       window.removeEventListener("focus", handleFocus);
+//       window.removeEventListener("storage", handleStorage);
+//     };
 //   }, []);
 
 //   useEffect(() => {
@@ -831,7 +851,7 @@
 //   );
 // }
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 
 import {
@@ -925,7 +945,7 @@ export default function DashboardPage() {
   const [recommendationsErr, setRecommendationsErr] = useState("");
   const [recommendationsLoading, setRecommendationsLoading] = useState(false);
 
-  const loadUserProfile = async () => {
+  const loadUserProfile = useCallback(async () => {
     const raw = localStorage.getItem("user");
     if (!raw) {
       setUserProfile(null);
@@ -948,7 +968,7 @@ export default function DashboardPage() {
       console.error("Failed to load profile for dashboard:", error);
       setUserProfile(null);
     }
-  };
+  }, []);
 
   useEffect(() => {
     const nextTicker =
@@ -965,7 +985,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     loadUserProfile();
-  }, []);
+  }, [loadUserProfile]);
 
   useEffect(() => {
     const handleFocus = () => {
@@ -985,12 +1005,13 @@ export default function DashboardPage() {
       window.removeEventListener("focus", handleFocus);
       window.removeEventListener("storage", handleStorage);
     };
-  }, []);
+  }, [loadUserProfile]);
 
   useEffect(() => {
     if (!userProfile) {
       setRecommendations(null);
       setRecommendationsErr("");
+      setRecommendationsLoading(false);
       return;
     }
 
@@ -1235,9 +1256,13 @@ export default function DashboardPage() {
     }
   }
 
-  const primarySector = useMemo(() => {
-    if (!userProfile?.favoriteSectors?.length) return "None";
-    return userProfile.favoriteSectors[0];
+  const sectorLabel = useMemo(() => {
+    const sectors = userProfile?.favoriteSectors ?? [];
+
+    if (sectors.length === 0) return "None";
+    if (sectors.length === 0) return "None";
+    if (sectors.length <= 3) return sectors.join(" • ");
+    return `${sectors.slice(0, 2).join(", ")} +${sectors.length - 2} more`;
   }, [userProfile]);
 
   const handleAddWatchlist = async () => {
@@ -1448,7 +1473,7 @@ export default function DashboardPage() {
                 <span className="badge">Risk: {userProfile.riskTolerance}</span>
                 <span className="badge">Goal: {userProfile.goal}</span>
                 <span className="badge">Horizon: {userProfile.horizon}</span>
-                <span className="badge">Sector: {primarySector}</span>
+                <span className="badge">Sectors: {sectorLabel}</span>
               </div>
 
               {recommendationsLoading && (
