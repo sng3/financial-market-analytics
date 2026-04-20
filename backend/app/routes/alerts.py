@@ -27,7 +27,6 @@ def list_alerts(user_id: int):
             email_alerts,
             price_alerts,
             news_alerts,
-            earnings_alerts,
             sms_notifications,
             push_notifications
         FROM users
@@ -54,7 +53,6 @@ def list_alerts(user_id: int):
             "emailAlerts": bool(user["email_alerts"]),
             "priceAlerts": bool(user["price_alerts"]),
             "newsAlerts": bool(user["news_alerts"]),
-            "earningsAlerts": bool(user["earnings_alerts"]),
             "smsNotifications": bool(user["sms_notifications"]),
             "pushNotifications": bool(user["push_notifications"]),
         },
