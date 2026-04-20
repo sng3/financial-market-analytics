@@ -225,6 +225,7 @@
 //       setCountryQuery(updated.country);
 //       setTimeZoneQuery(getTimeZoneLabel(updated.timeZone));
 //       localStorage.setItem("user", JSON.stringify(updated));
+//       localStorage.setItem("profileUpdatedAt", Date.now().toString());
 //       setSaved("Profile updated successfully.");
 //       setTimeout(() => setSaved(""), 2000);
 //     } catch {
@@ -249,6 +250,7 @@
 //     try {
 //       await deleteProfile(user.id);
 //       localStorage.removeItem("user");
+//       localStorage.removeItem("profileUpdatedAt");
 //       alert("Your account has been deleted.");
 //       nav("/signup");
 //       window.location.reload();
@@ -405,24 +407,6 @@
 //               <option value="1 - 5 Years">1 - 5 Years</option>
 //               <option value="5+ Years">5+ Years</option>
 //             </select>
-
-//             <div
-//               style={{
-//                 marginTop: 4,
-//                 padding: 12,
-//                 borderRadius: 12,
-//                 border: "1px solid rgba(74,144,226,0.24)",
-//                 background: "rgba(74,144,226,0.08)",
-//                 color: "var(--muted)",
-//                 fontSize: 13,
-//                 lineHeight: 1.6,
-//               }}
-//             >
-//               These preferences are used to personalize your dashboard. Risk
-//               tolerance affects prediction interpretation, horizon affects
-//               default chart range, and goal helps guide suggested stocks and
-//               learning focus.
-//             </div>
 //           </div>
 //         </Card>
 //       </div>
@@ -452,23 +436,6 @@
 //                 </button>
 //               );
 //             })}
-//           </div>
-
-//           <div
-//             style={{
-//               marginTop: 12,
-//               padding: 12,
-//               borderRadius: 12,
-//               border: "1px solid rgba(255,255,255,0.08)",
-//               background: "rgba(255,255,255,0.03)",
-//               color: "var(--muted)",
-//               fontSize: 13,
-//               lineHeight: 1.6,
-//             }}
-//           >
-//             Your selected sectors are used to generate personalized stock ideas
-//             on the dashboard so the app can recommend companies that better match
-//             your interests.
 //           </div>
 //         </Card>
 //       </div>
@@ -836,6 +803,12 @@ export const timeZoneOptions: TimeZoneOption[] = [
   { value: "Pacific/Auckland", label: "GMT+12  Auckland (New Zealand)" },
 ];
 
+const DASHBOARD_RANGE_KEY = "dashboardSelectedRange";
+const DASHBOARD_RANGE_TOUCHED_KEY = "dashboardSelectedRangeTouched";
+const DASHBOARD_RISK_KEY = "dashboardRiskProfile";
+const DASHBOARD_RISK_TOUCHED_KEY = "dashboardRiskProfileTouched";
+const DASHBOARD_TICKER_KEY = "lastDashboardTicker";
+
 function getTimeZoneLabel(value: string): string {
   const matched = timeZoneOptions.find(
     (option: TimeZoneOption) => option.value === value
@@ -943,10 +916,19 @@ export default function ProfilePage() {
       setCountryQuery(updated.country);
       setTimeZoneQuery(getTimeZoneLabel(updated.timeZone));
       localStorage.setItem("user", JSON.stringify(updated));
+
+      // Clear manual Dashboard overrides so Dashboard follows the newly saved profile again.
+      localStorage.removeItem(DASHBOARD_RISK_KEY);
+      localStorage.removeItem(DASHBOARD_RISK_TOUCHED_KEY);
+      localStorage.removeItem(DASHBOARD_RANGE_KEY);
+      localStorage.removeItem(DASHBOARD_RANGE_TOUCHED_KEY);
+
       localStorage.setItem("profileUpdatedAt", Date.now().toString());
+
       setSaved("Profile updated successfully.");
       setTimeout(() => setSaved(""), 2000);
-    } catch {
+    } catch (error) {
+      console.error("Save failed:", error);
       setSaved("Failed to save profile.");
       setTimeout(() => setSaved(""), 2000);
     }
@@ -954,6 +936,13 @@ export default function ProfilePage() {
 
   const handleLogout = () => {
     localStorage.removeItem("user");
+    localStorage.removeItem("profileUpdatedAt");
+    localStorage.removeItem(DASHBOARD_RISK_KEY);
+    localStorage.removeItem(DASHBOARD_RISK_TOUCHED_KEY);
+    localStorage.removeItem(DASHBOARD_RANGE_KEY);
+    localStorage.removeItem(DASHBOARD_RANGE_TOUCHED_KEY);
+    localStorage.removeItem(DASHBOARD_TICKER_KEY);
+
     nav("/login");
     window.location.reload();
   };
@@ -967,8 +956,15 @@ export default function ProfilePage() {
 
     try {
       await deleteProfile(user.id);
+
       localStorage.removeItem("user");
       localStorage.removeItem("profileUpdatedAt");
+      localStorage.removeItem(DASHBOARD_RISK_KEY);
+      localStorage.removeItem(DASHBOARD_RISK_TOUCHED_KEY);
+      localStorage.removeItem(DASHBOARD_RANGE_KEY);
+      localStorage.removeItem(DASHBOARD_RANGE_TOUCHED_KEY);
+      localStorage.removeItem(DASHBOARD_TICKER_KEY);
+
       alert("Your account has been deleted.");
       nav("/signup");
       window.location.reload();

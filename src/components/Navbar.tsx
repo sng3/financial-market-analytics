@@ -1,4 +1,3 @@
-import React from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 
 export default function Navbar() {
