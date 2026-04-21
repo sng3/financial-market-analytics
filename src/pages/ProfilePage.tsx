@@ -1,4 +1,4 @@
-// import React, { useEffect, useMemo, useState } from "react";
+// import { useEffect, useMemo, useState } from "react";
 // import Card from "../components/Card";
 // import InfoDialog from "../components/InfoDialog";
 // import { useNavigate } from "react-router-dom";
@@ -20,7 +20,6 @@
 //     emailAlerts: true,
 //     priceAlerts: true,
 //     newsAlerts: true,
-//     earningsAlerts: false,
 //     smsNotifications: false,
 //     pushNotifications: false,
 //   },
@@ -186,9 +185,7 @@
 //   }, [timeZoneQuery]);
 
 //   const hasSelectedAlertType =
-//     user.notifications.priceAlerts ||
-//     user.notifications.newsAlerts ||
-//     user.notifications.earningsAlerts;
+//     user.notifications.priceAlerts || user.notifications.newsAlerts;
 
 //   const hasSelectedDeliveryMethod =
 //     user.notifications.emailAlerts ||
@@ -228,6 +225,7 @@
 //       setCountryQuery(updated.country);
 //       setTimeZoneQuery(getTimeZoneLabel(updated.timeZone));
 //       localStorage.setItem("user", JSON.stringify(updated));
+//       localStorage.setItem("profileUpdatedAt", Date.now().toString());
 //       setSaved("Profile updated successfully.");
 //       setTimeout(() => setSaved(""), 2000);
 //     } catch {
@@ -252,6 +250,7 @@
 //     try {
 //       await deleteProfile(user.id);
 //       localStorage.removeItem("user");
+//       localStorage.removeItem("profileUpdatedAt");
 //       alert("Your account has been deleted.");
 //       nav("/signup");
 //       window.location.reload();
@@ -536,24 +535,6 @@
 //                   />
 //                   News alerts
 //                 </label>
-
-//                 <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
-//                   <input
-//                     type="checkbox"
-//                     checked={user.notifications.earningsAlerts}
-//                     onChange={(e) => {
-//                       setNotificationError("");
-//                       setUser({
-//                         ...user,
-//                         notifications: {
-//                           ...user.notifications,
-//                           earningsAlerts: e.target.checked,
-//                         },
-//                       });
-//                     }}
-//                   />
-//                   Earnings alerts
-//                 </label>
 //               </div>
 //             </div>
 
@@ -681,7 +662,7 @@
 //             </strong>
 //             <div style={{ marginTop: 4 }}>
 //               Select one or more alert categories to receive notifications for
-//               price movements, market news, and earnings announcements.
+//               price movements and market news.
 //             </div>
 //           </div>
 
@@ -690,8 +671,10 @@
 //               Delivery
 //             </strong>
 //             <div style={{ marginTop: 4 }}>
-//               Select one or more delivery methods to receive notifications. If any alert type is enabled, at least one delivery method must also be enabled. 
-//               Likewise, if any delivery method is enabled, at least one alert type must also be selected.
+//               Select one or more delivery methods to receive notifications. If
+//               any alert type is enabled, at least one delivery method must also
+//               be enabled. Likewise, if any delivery method is enabled, at least
+//               one alert type must also be selected.
 //             </div>
 //           </div>
 //         </div>
@@ -820,6 +803,12 @@ export const timeZoneOptions: TimeZoneOption[] = [
   { value: "Pacific/Auckland", label: "GMT+12  Auckland (New Zealand)" },
 ];
 
+const DASHBOARD_RANGE_KEY = "dashboardSelectedRange";
+const DASHBOARD_RANGE_TOUCHED_KEY = "dashboardSelectedRangeTouched";
+const DASHBOARD_RISK_KEY = "dashboardRiskProfile";
+const DASHBOARD_RISK_TOUCHED_KEY = "dashboardRiskProfileTouched";
+const DASHBOARD_TICKER_KEY = "lastDashboardTicker";
+
 function getTimeZoneLabel(value: string): string {
   const matched = timeZoneOptions.find(
     (option: TimeZoneOption) => option.value === value
@@ -927,9 +916,19 @@ export default function ProfilePage() {
       setCountryQuery(updated.country);
       setTimeZoneQuery(getTimeZoneLabel(updated.timeZone));
       localStorage.setItem("user", JSON.stringify(updated));
+
+      // Clear manual Dashboard overrides so Dashboard follows the newly saved profile again.
+      localStorage.removeItem(DASHBOARD_RISK_KEY);
+      localStorage.removeItem(DASHBOARD_RISK_TOUCHED_KEY);
+      localStorage.removeItem(DASHBOARD_RANGE_KEY);
+      localStorage.removeItem(DASHBOARD_RANGE_TOUCHED_KEY);
+
+      localStorage.setItem("profileUpdatedAt", Date.now().toString());
+
       setSaved("Profile updated successfully.");
       setTimeout(() => setSaved(""), 2000);
-    } catch {
+    } catch (error) {
+      console.error("Save failed:", error);
       setSaved("Failed to save profile.");
       setTimeout(() => setSaved(""), 2000);
     }
@@ -937,6 +936,13 @@ export default function ProfilePage() {
 
   const handleLogout = () => {
     localStorage.removeItem("user");
+    localStorage.removeItem("profileUpdatedAt");
+    localStorage.removeItem(DASHBOARD_RISK_KEY);
+    localStorage.removeItem(DASHBOARD_RISK_TOUCHED_KEY);
+    localStorage.removeItem(DASHBOARD_RANGE_KEY);
+    localStorage.removeItem(DASHBOARD_RANGE_TOUCHED_KEY);
+    localStorage.removeItem(DASHBOARD_TICKER_KEY);
+
     nav("/login");
     window.location.reload();
   };
@@ -950,7 +956,15 @@ export default function ProfilePage() {
 
     try {
       await deleteProfile(user.id);
+
       localStorage.removeItem("user");
+      localStorage.removeItem("profileUpdatedAt");
+      localStorage.removeItem(DASHBOARD_RISK_KEY);
+      localStorage.removeItem(DASHBOARD_RISK_TOUCHED_KEY);
+      localStorage.removeItem(DASHBOARD_RANGE_KEY);
+      localStorage.removeItem(DASHBOARD_RANGE_TOUCHED_KEY);
+      localStorage.removeItem(DASHBOARD_TICKER_KEY);
+
       alert("Your account has been deleted.");
       nav("/signup");
       window.location.reload();

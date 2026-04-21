@@ -1,4 +1,3 @@
-import React from "react";
 import { useNavigate } from "react-router-dom";
 import StockSearchBar from "../components/StockSearchBar";
 import Card from "../components/Card";

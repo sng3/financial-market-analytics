@@ -1,4 +1,3 @@
-import React from "react";
 import Card from "./Card";
 
 type Item = { ticker: string; price: number; changePct: number };

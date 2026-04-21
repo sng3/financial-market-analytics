@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { searchStocks, type SearchResult } from "../services/api";
 
 type Props = {

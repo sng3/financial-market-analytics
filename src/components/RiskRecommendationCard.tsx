@@ -1,5 +1,3 @@
-import React from "react";
-
 export type RiskProfile = "Conservative" | "Moderate" | "Aggressive";
 
 type Props = {
